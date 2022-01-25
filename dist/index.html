@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Arnell Compiler</title>
+    <!-- Bootstrapping the CSS from: https://getbootstrap.com/docs/5.1/getting-started/download/-->
+    <link rel= "stylesheet" href="css/bootstrap.min.css">
+
+    <!-- JS Class Templates -->
+    <script src = "js/structures/Entity.js"></script>
+
+    <!-- JS Scripts -->
+    <script src = "js/CompileCode.js"></script>
+
+</head>
+<body>
+
+
+<div style="margin-top: 4%;">
+<!-- Text Area Containers-->
+<div class="row g-2" style="margin-left: 4%;margin-right: 4%;">
+    <div class = "col-md">
+        <label>Source Code</label>
+        <div class="form-floating p-3 mb-2 bg-transparent text-dark" style="size:50%">
+            <textarea class="form-control" id="sourceCodeInput" style="height: 400px;resize:none" autofocus></textarea>
+        </div>
+    </div>
+
+    <div class = "col-md">
+        <label>Compiler Logging</label>
+        <div class="form-floating p-3 mb-2 bg-transparent text-dark" style="size:50%">
+            <textarea class="form-control"  id="compilerLogOutput" style="height: 400px;resize:none" readOnly></textarea>
+        </div>
+    </div>
+</div>
+<div style="size:50%;margin-left: 50%;">
+    <button type="button" class="btn btn-primary btn-md" id = "compileButton" >Compile</button>
+    <button type="button" class="btn btn-danger btn-md" id = "clearButton" style="margin-left: 20%;">Clear</button>    
+</div>
+
+<div class="form-floating p-3 mb-2 bg-transparent text-dark" style="size:50%; margin-left: 10%; margin-right: 10%;">
+    <textarea class="form-control" id="machineCodeOutput" style="height: 300px;resize:none"></textarea>
+</div>
+
+
+
+</div>
+
+<script>
+
+    // Triggers the Compilier Process
+    document.getElementById("compileButton").onclick = initiateCompiler
+    
+    // Updates the output logging
+    function log(text){
+    }
+
+    document.getElementById("clearButton").onclick = ()=>{
+        document.getElementById("compilerLogOutput").value = ""
+        document.getElementById("machineCodeOutput").value = ""
+    }
+</script>
+
+</body>
+</html>
