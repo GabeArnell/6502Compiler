@@ -22,9 +22,17 @@ class Lexer extends Entity{
                         c++;
                         continue;
                     }
-                    tokenList.push(new nextTokenClass(c,r));
-                    this.info(`${nextTokenClass.name} [ ${nextTokenClass.lexeme} ] found at (${r+1}:${c+1})`);
-                    c = c + nextTokenClass.lexeme.length
+                    var newToken = new nextTokenClass(c,r,row[c])
+                    tokenList.push(newToken);
+                    
+                    if (newToken.symbol){
+                        this.info(`${nextTokenClass.name} [ ${newToken.symbol} ] found at (${r+1}:${c+1})`);
+                        c = c + newToken.symbol.length
+                    }else{
+                        console.log(newToken)
+                        this.info(`${nextTokenClass.name} [ ${nextTokenClass.lexeme} ] found at (${r+1}:${c+1})`);
+                        c = c + nextTokenClass.lexeme.length
+                    }
                 }else{
                     this.warn(`${r+1}:${c+1} Unrecognized Token: ${row[c]}`)
                     c++
@@ -42,6 +50,7 @@ class Lexer extends Entity{
 
         //finding tokens in list by whichever has the closest matching from left->right
         var currentToken = null;
+        //searching static tokens
         for (var token of TOKEN_LIST){
             if (line.substring(0,token.lexeme.length) == token.lexeme){
                 if (!currentToken || token.lexeme > currentToken.lexeme){
@@ -49,16 +58,24 @@ class Lexer extends Entity{
                 }
             }
         }
+        if (currentToken != null)
+            return currentToken;
         
 
+        //Looking for token as a char
+        if (CHAR_LIST.includes(line.charAt(0))){
+            console.log("INCLUDES "+line.charAt(0))
+            return ID;
+        }
 
-        //Looking for token as a char or digit
+        //Looking for token as a char
+        if (DIGIT_LIST.includes(line.charAt(0))){
+            console.log("INCLUDES "+line.charAt(0))
+            return DIGIT;
+        }
+
         
-
-
-        //rejecting if anything but a space
-
-        return currentToken
+        return null
     }
 
 

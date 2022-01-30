@@ -1,12 +1,14 @@
 class Token{
     public row:number=null;
     public column:number=null;
+    
     constructor(column:number,row:number){
         this.row = row;
         this.column = column
     }
 }
 
+// List of static tokens
 const TOKEN_LIST = [
     class EOP extends Token{
         static lexeme:string = '$'
@@ -145,4 +147,20 @@ const TOKEN_LIST = [
         static lexeme:string = '\t'
     }
 ]
+
+// Dynamic tokens that can have multiple lexemes. 
+class ID extends Token{
+    public symbol:string;
+    constructor(c:number,r:number,symbol:string){
+        super(c,r)
+        this.symbol=symbol;
+    }
+}
+class DIGIT extends Token{
+    public symbol:string;
+    constructor(c:number,r:number,symbol:string){
+        super(c,r)
+        this.symbol=symbol;
+    }
+}
 
