@@ -1,16 +1,21 @@
 
 
 class Lexer extends Entity{
-
-    constructor(){
+    public compiler:Compiler;
+    constructor(comp:Compiler){
         super("Lexer");
+        this.compiler = comp;
     }
 
 
     lexcode(sourcecode:string){
+        this.info("Lexing program "+this.compiler.id)
+
         var rows = sourcecode.split("\n");
-        var errors = 0;
+        var errors:number = 0;
         var tokenList = [];
+        var commenting:boolean = false;
+
         console.log(rows)
         for (var r = 0; r < rows.length; r++){
             var row:string = rows[r];
@@ -19,6 +24,23 @@ class Lexer extends Entity{
                 var nextTokenClass = this.findNextToken(row.substring(c,row.length));
                 if (nextTokenClass){
                     if (nextTokenClass.name == 'SPACE' || nextTokenClass.name == 'TAB'){
+                        c++;
+                        continue;
+                    }
+                    if (nextTokenClass.name == "STARTCOMMENT"){
+                        this.warn("STARTING COMMENTING");
+
+                        commenting = true;
+                        c+=nextTokenClass.lexeme.length;
+                        continue;
+                    }
+                    if (nextTokenClass.name == "ENDCOMMENT"){
+                        this.warn("ENDING COMMENT");
+                        commenting = false;
+                        c+=nextTokenClass.lexeme.length;
+                        continue;
+                    }
+                    if (commenting == true){
                         c++;
                         continue;
                     }
@@ -34,11 +56,21 @@ class Lexer extends Entity{
                         c = c + nextTokenClass.lexeme.length
                     }
                 }else{
-                    this.warn(`${r+1}:${c+1} Unrecognized Token: ${row[c]}`)
+                    if (!commenting){
+                        this.warn(`${r+1}:${c+1} Unrecognized Token: ${row[c]}`);
+                        errors++;
+                    }
                     c++
                 }
             }
         }
+
+        if (errors > 0){
+            this.info("Lexing failed with "+errors+" error(s).");
+        }else{
+            this.info("Lexing completed with "+errors+" errors.");
+        }
+
         return tokenList;
     }
     
