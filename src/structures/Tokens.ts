@@ -142,9 +142,6 @@ const TOKEN_LIST = [
     //These never get actually constructed but are identified as tokens for the lexer to throw away
     class SPACE extends Token{ 
         static lexeme:string = ' '
-    },
-    class TAB extends Token{ 
-        static lexeme:string = '\t'
     }
 ]
 
@@ -163,4 +160,12 @@ class DIGIT extends Token{
         this.symbol=symbol;
     }
 }
+class CHAR extends Token{
+    public symbol:string;
+    constructor(c:number,r:number,symbol:string){
+        super(c,r)
+        this.symbol=symbol;
+    }
+}
+
 

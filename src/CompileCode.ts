@@ -13,9 +13,9 @@ class Compiler extends Entity{
     }
 
     run(sourcecode:string){
-        sourcecode = this.sanityCheck(sourcecode);
-
-        this.lex = new Lexer();
+        //sourcecode = this.sanityCheck(sourcecode);
+        
+        this.lex = new Lexer(this);
         this.tokenlist = this.lex.lexcode(sourcecode);
         console.log(this.tokenlist)
     }
@@ -53,9 +53,23 @@ class Compiler extends Entity{
 function initiateCompiler() { 
 
     var givenText = document.getElementById("sourceCodeInput")['value'].trim();
-
+    var programsCode = splitSourceCode(givenText);
     var comp = new Compiler();
     comp.log("Starting Compile Run #"+comp.id)
 
     comp.run(givenText);
+}
+
+// Returns the source code split up into separate programs
+function splitSourceCode(sourcecode:string){
+    var inComment:boolean = false;
+    var lastIndex = 0;
+    var programs = [];
+
+    while (sourcecode.length > 0){
+
+    }
+
+
+    return
 }

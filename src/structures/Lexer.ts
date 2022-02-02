@@ -14,36 +14,43 @@ class Lexer extends Entity{
         var rows = sourcecode.split("\n");
         var errors:number = 0;
         var tokenList = [];
-        var commenting:boolean = false;
-
+        var inComment:boolean = false;
+        var inString:boolean = false;
         console.log(rows)
         for (var r = 0; r < rows.length; r++){
             var row:string = rows[r];
             var c = 0;
             while (c < row.length){
-                var nextTokenClass = this.findNextToken(row.substring(c,row.length));
+                var nextTokenClass = this.findNextToken(row.substring(c,row.length),inString);
                 if (nextTokenClass){
-                    if (nextTokenClass.name == 'SPACE' || nextTokenClass.name == 'TAB'){
+                    if (nextTokenClass.name == 'SPACE' && !inString){
                         c++;
                         continue;
                     }
                     if (nextTokenClass.name == "STARTCOMMENT"){
                         this.warn("STARTING COMMENTING");
 
-                        commenting = true;
+                        inComment = true;
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
                     if (nextTokenClass.name == "ENDCOMMENT"){
                         this.warn("ENDING COMMENT");
-                        commenting = false;
+                        inComment = false;
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
-                    if (commenting == true){
+                    if (inComment == true){
                         c++;
                         continue;
                     }
+                    if (nextTokenClass.name == "QUOTE"){
+                        inString  = !inString;
+                    }else if (inString){
+                        
+                    }
+
+                    
                     var newToken = new nextTokenClass(c,r,row[c])
                     tokenList.push(newToken);
                     
@@ -56,8 +63,8 @@ class Lexer extends Entity{
                         c = c + nextTokenClass.lexeme.length
                     }
                 }else{
-                    if (!commenting){
-                        this.warn(`${r+1}:${c+1} Unrecognized Token: ${row[c]}`);
+                    if (!inComment){
+                        this.error(`${r+1}:${c+1} Unrecognized Token${inString?" in string ":""}: ${row[c]}`);
                         errors++;
                     }
                     c++
@@ -66,7 +73,7 @@ class Lexer extends Entity{
         }
 
         if (errors > 0){
-            this.info("Lexing failed with "+errors+" error(s).");
+            this.error("Lexing failed with "+errors+" error(s).");
         }else{
             this.info("Lexing completed with "+errors+" errors.");
         }
@@ -78,7 +85,7 @@ class Lexer extends Entity{
         Finds and returns the next token in the given string and the text it used
         Will prioritize longer token strings over smaller ones. Ex: 'print' would be returned instead of 'p' the letter
     */
-    private findNextToken(line:string){
+    private findNextToken(line:string,inString:boolean){
 
         //finding tokens in list by whichever has the closest matching from left->right
         var currentToken = null;
@@ -90,24 +97,28 @@ class Lexer extends Entity{
                 }
             }
         }
-        if (currentToken != null)
+        if (currentToken != null && !inString)
             return currentToken;
         
 
         //Looking for token as a char
         if (CHAR_LIST.includes(line.charAt(0))){
             console.log("INCLUDES "+line.charAt(0))
-            return ID;
+            if (!inString){
+                return ID
+            }else{
+                return CHAR
+            }
         }
 
         //Looking for token as a char
-        if (DIGIT_LIST.includes(line.charAt(0))){
+        if (DIGIT_LIST.includes(line.charAt(0)) && !inString){
             console.log("INCLUDES "+line.charAt(0))
             return DIGIT;
         }
 
         
-        return null
+        return currentToken
     }
 
 
