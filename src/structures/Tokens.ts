@@ -16,6 +16,7 @@ const TOKEN_LIST = [
             super(c,r)
         }
     },
+
     class STARTCOMMENT extends Token{
         static lexeme:string = '/*'
         constructor(c:number,r:number){
@@ -167,5 +168,13 @@ class CHAR extends Token{
         this.symbol=symbol;
     }
 }
-
+//Lets me grab token classes for specific token creation
+function getTokenClass(className:string){
+    for (var t of TOKEN_LIST){
+        if (t.name == className){
+            return t;
+        }
+    }
+    return null;
+}
 

@@ -13,8 +13,9 @@ class Lexer extends Entity{
 
         var rows = sourcecode.split("\n");
         var errors:number = 0;
-        var tokenList = [];
-        var inComment:boolean = false;
+        var warnings:number = 0;
+        var tokenStream = [];
+        var inComment = null;
         var inString:boolean = false;
         console.log(rows)
         for (var r = 0; r < rows.length; r++){
@@ -28,31 +29,36 @@ class Lexer extends Entity{
                         continue;
                     }
                     if (nextTokenClass.name == "STARTCOMMENT"){
-                        this.warn("STARTING COMMENTING");
-
-                        inComment = true;
+                        inComment = [c+1,r+1];//labeling where comment starts incase it needs a warning
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
                     if (nextTokenClass.name == "ENDCOMMENT"){
-                        this.warn("ENDING COMMENT");
-                        inComment = false;
+                        console.log(inComment)
+                        if (inComment == null){//incase of double */
+                            this.error(`Unpaired [ ${nextTokenClass.lexeme} ] token at ${r+1}:${c+1}`);
+                            errors++; 
+                            c+=nextTokenClass.lexeme.length;
+                            continue;   
+                        }
+                        inComment = null;
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
-                    if (inComment == true){
+                    if (inComment != null){
                         c++;
                         continue;
                     }
                     if (nextTokenClass.name == "QUOTE"){
                         inString  = !inString;
                     }else if (inString){
-                        
+                        c++;
+                        continue;
                     }
 
                     
-                    var newToken = new nextTokenClass(c,r,row[c])
-                    tokenList.push(newToken);
+                    var newToken = new nextTokenClass(c+1,r+1,row[c])
+                    tokenStream.push(newToken);
                     
                     if (newToken.symbol){
                         this.info(`${nextTokenClass.name} [ ${newToken.symbol} ] found at (${r+1}:${c+1})`);
@@ -63,7 +69,7 @@ class Lexer extends Entity{
                         c = c + nextTokenClass.lexeme.length
                     }
                 }else{
-                    if (!inComment){
+                    if (inComment == null){
                         this.error(`${r+1}:${c+1} Unrecognized Token${inString?" in string ":""}: ${row[c]}`);
                         errors++;
                     }
@@ -72,13 +78,54 @@ class Lexer extends Entity{
             }
         }
 
-        if (errors > 0){
-            this.error("Lexing failed with "+errors+" error(s).");
-        }else{
-            this.info("Lexing completed with "+errors+" errors.");
+
+        // Post Run Error CHecks
+
+        if (inComment){
+            this.error("Unclosed Comment starting at "+`${inComment[0]}:${inComment[0]}`); //add info where comment starts here
+            errors++;
+        }
+        if (inString){
+            var lastToken:Token = tokenStream[tokenStream.length-1]
+            this.error(`Unclosed string starting at ${lastToken.row}:${lastToken.column}`); //add info where comment starts here
+            errors++;
+        }
+        
+        if (tokenStream.length < 1){
+            return tokenStream;
         }
 
-        return tokenList;
+        //checking {} and $ format
+        if (tokenStream[0].constructor.name != "L_BRACE"){
+            this.warn(`Did not start program block with {`);
+            const startClass = getTokenClass("L_BRACE");
+            const startBrace = new startClass(0,0); 
+            tokenStream.splice(0,0,startBrace);
+            warnings++;
+        }
+        if (tokenStream[tokenStream.length-1].constructor.name != "EOP"){
+            this.warn(`Did not end program code with $`);
+            const endClass = getTokenClass("EOP");
+            const endEOP = new endClass(tokenStream[tokenStream.length-1].column+1,tokenStream[tokenStream.length-1].row); 
+            tokenStream.push(endEOP);
+            warnings++;
+        }
+        if (tokenStream[tokenStream.length-2].constructor.name != "R_BRACE"){
+            this.warn(`Did not end program block with }`);
+            const endClass = getTokenClass("R_BRACE");
+            const endEOP = new endClass(tokenStream[tokenStream.length-1].column+1,tokenStream[tokenStream.length-1].row); 
+            tokenStream.splice(tokenStream.length-1,0,endEOP);
+            warnings++;
+        }
+
+
+        if (errors > 0 ){
+            this.error(`Lexing failed with ${errors} error(s) and ${warnings} warnings.`);
+        }else{
+            this.info(`Lexing completed with ${errors} errors and ${warnings} warnings.`);
+        }
+
+        return tokenStream;
     }
     
     /*
