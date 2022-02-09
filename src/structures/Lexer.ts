@@ -9,7 +9,9 @@ class Lexer extends Entity{
 
 
     lexcode(sourcecode:string){
-        this.info("Lexing program "+this.compiler.id)
+        this.info("Lexing program "+this.compiler.id);
+
+
 
         var rows = sourcecode.split("\n");
         var errors:number = 0;
@@ -17,11 +19,13 @@ class Lexer extends Entity{
         var tokenStream = [];
         var inComment = null;
         var inString:boolean = false;
+
         console.log(rows)
-        for (var r = 0; r < rows.length; r++){
+        for (var r = this.compiler.startRow; r <= this.compiler.endRow; r++){
             var row:string = rows[r];
-            var c = 0;
-            while (c < row.length){
+            var c = r==this.compiler.startRow?this.compiler.startColumn:0;
+            
+            while ((r < this.compiler.endRow && c <row.length) || (c <= this.compiler.endColumn)){
                 var nextTokenClass = this.findNextToken(row.substring(c,row.length),inString);
                 if (nextTokenClass){
                     if (nextTokenClass.name == 'SPACE' && !inString){
@@ -82,7 +86,7 @@ class Lexer extends Entity{
         // Post Run Error CHecks
 
         if (inComment){
-            this.error("Unclosed Comment starting at "+`${inComment[0]}:${inComment[0]}`); //add info where comment starts here
+            this.warn("Unclosed Comment starting at "+`${inComment[0]}:${inComment[0]}`); //add info where comment starts here
             errors++;
         }
         if (inString){
@@ -90,12 +94,17 @@ class Lexer extends Entity{
             this.error(`Unclosed string starting at ${lastToken.row}:${lastToken.column}`); //add info where comment starts here
             errors++;
         }
-        
+        if (tokenStream[tokenStream.length-1].constructor.name != "EOP"){
+            this.warn(`Did not end program code with $`);
+            warnings++;
+        }
+
         if (tokenStream.length < 1){
             return tokenStream;
         }
 
         //checking {} and $ format
+        /* Lexer shouldnt be doing this
         if (tokenStream[0].constructor.name != "L_BRACE"){
             this.warn(`Did not start program block with {`);
             const startClass = getTokenClass("L_BRACE");
@@ -103,20 +112,14 @@ class Lexer extends Entity{
             tokenStream.splice(0,0,startBrace);
             warnings++;
         }
-        if (tokenStream[tokenStream.length-1].constructor.name != "EOP"){
-            this.warn(`Did not end program code with $`);
-            const endClass = getTokenClass("EOP");
-            const endEOP = new endClass(tokenStream[tokenStream.length-1].column+1,tokenStream[tokenStream.length-1].row); 
-            tokenStream.push(endEOP);
-            warnings++;
-        }
+        
         if (tokenStream[tokenStream.length-2].constructor.name != "R_BRACE"){
             this.warn(`Did not end program block with }`);
             const endClass = getTokenClass("R_BRACE");
             const endEOP = new endClass(tokenStream[tokenStream.length-1].column+1,tokenStream[tokenStream.length-1].row); 
             tokenStream.splice(tokenStream.length-1,0,endEOP);
             warnings++;
-        }
+        }*/
 
 
         if (errors > 0 ){
