@@ -24,8 +24,8 @@ class Lexer extends Entity{
         for (var r = this.compiler.startRow; r <= this.compiler.endRow; r++){
             var row:string = rows[r];
             var c = r==this.compiler.startRow?this.compiler.startColumn:0;
-            
-            while ((r < this.compiler.endRow && c <row.length) || (c <= this.compiler.endColumn)){
+
+            while ((r < this.compiler.endRow && c <row.length) || (r == this.compiler.endRow &&c <= this.compiler.endColumn)){ //can go to end of row if its not the last row
                 var nextTokenClass = this.findNextToken(row.substring(c,row.length),inString);
                 if (nextTokenClass){
                     if (nextTokenClass.name == 'SPACE' && !inString){
@@ -53,14 +53,16 @@ class Lexer extends Entity{
                         c++;
                         continue;
                     }
+
                     if (nextTokenClass.name == "QUOTE"){
                         inString  = !inString;
-                    }else if (inString){
+                    }else if (inString && nextTokenClass.name != "CHAR"){
+                        this.error(`${r+1}:${c+1} Illegal Token placement in string: ${row[c]}`);
+                        errors++;
                         c++;
                         continue;
                     }
 
-                    
                     var newToken = new nextTokenClass(c+1,r+1,row[c])
                     tokenStream.push(newToken);
                     
@@ -103,29 +105,10 @@ class Lexer extends Entity{
             return tokenStream;
         }
 
-        //checking {} and $ format
-        /* Lexer shouldnt be doing this
-        if (tokenStream[0].constructor.name != "L_BRACE"){
-            this.warn(`Did not start program block with {`);
-            const startClass = getTokenClass("L_BRACE");
-            const startBrace = new startClass(0,0); 
-            tokenStream.splice(0,0,startBrace);
-            warnings++;
-        }
-        
-        if (tokenStream[tokenStream.length-2].constructor.name != "R_BRACE"){
-            this.warn(`Did not end program block with }`);
-            const endClass = getTokenClass("R_BRACE");
-            const endEOP = new endClass(tokenStream[tokenStream.length-1].column+1,tokenStream[tokenStream.length-1].row); 
-            tokenStream.splice(tokenStream.length-1,0,endEOP);
-            warnings++;
-        }*/
-
-
         if (errors > 0 ){
-            this.error(`Lexing failed with ${errors} error(s) and ${warnings} warnings.`);
+            this.error(`Lexing failed with ${errors} error(s) and ${warnings} warning(s).`);
         }else{
-            this.info(`Lexing completed with ${errors} errors and ${warnings} warnings.`);
+            this.info(`Lexing completed with ${errors} errors and ${warnings} warning(s).`);
         }
 
         return tokenStream;

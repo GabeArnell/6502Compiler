@@ -23,7 +23,7 @@ class Compiler extends Entity{
         this.endRow = range.endRow;
         this.startColumn = range.startColumn;
         this.endColumn = range.endColumn;
-        console.log('code',sourcecode)
+        console.log('code',range)
     }
 
     run(){
@@ -97,17 +97,22 @@ function splitSourceCode(givenText:string){
             inComment = false;
         }
         //cutting of code to write new program if $ is marked or if at end of file
-        if ((givenText.charAt(i) == "$" && !inComment) || i == givenText.length-1){
-            givenText = givenText.substring(i+1,givenText.length+1);
+        if ((!inComment && givenText.charAt(i) == "$") || i == givenText.length-1){
             programs.push({
                 startRow: prevRow,
                 startColumn: prevColumn,
                 endRow: row,
                 endColumn: column
             }); 
+            console.log('New chunk:',{
+                startRow: prevRow,
+                startColumn: prevColumn,
+                endRow: row,
+                endColumn: column
+            })
+
             prevRow = row;
-            prevColumn = column;
-            break;
+            prevColumn = column+1;
         }
         column++;
         if (givenText.charAt(i)=="\n"){
@@ -115,7 +120,15 @@ function splitSourceCode(givenText:string){
             column=0;
         }
     }
-    // TODO, add catch for not ending in $
+    /* TODO, add catch for not ending in $
+    if (row != prevRow && column!= prevColumn){
+        programs.push({
+            startRow: prevRow,
+            startColumn: prevColumn,
+            endRow: row,
+            endColumn: column
+        }); 
+    }*/
     
 
 
