@@ -7,9 +7,15 @@
     <!-- Bootstrapping the CSS from: https://getbootstrap.com/docs/5.1/getting-started/download/-->
     <link rel= "stylesheet" href="css/bootstrap.min.css">
 
+    <!-- JS Configuration and Static Settings -->
+    <script src = "js/structures/Characters.js"></script>
+
     <!-- JS Class Templates -->
     <script src = "js/structures/Entity.js"></script>
-
+    <script src = "js/structures/Tokens.js"></script>
+    <script src = "js/structures/Lexer.js"></script>
+    <script src = "js/structures/Compiler.js"></script>
+    
     <!-- JS Scripts -->
     <script src = "js/CompileCode.js"></script>
 
@@ -50,12 +56,8 @@
 <script>
 
     // Triggers the Compilier Process
-    document.getElementById("compileButton").onclick = initiateCompiler
+    document.getElementById("compileButton").onclick = initiateCompiler // function in CompileCode script
     
-    // Updates the output logging
-    function log(text){
-    }
-
     document.getElementById("clearButton").onclick = ()=>{
         document.getElementById("compilerLogOutput").value = ""
         document.getElementById("machineCodeOutput").value = ""
