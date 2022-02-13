@@ -1,45 +1,49 @@
 
-
+// Lexer section of the compiler. Returns the tokenstream
 class Lexer extends Entity{
     public compiler:Compiler;
+
     constructor(comp:Compiler){
         super("Lexer");
         this.compiler = comp;
     }
 
 
-    lexcode(sourcecode:string){
+    lexcode(sourceCode:string){
         this.info("Lexing program "+this.compiler.id);
 
 
 
-        var rows = sourcecode.split("\n");
+        var rows:string[] = sourceCode.split("\n");
         var errors:number = 0;
         var warnings:number = 0;
-        var tokenStream = [];
-        var inComment = null;
+        var tokenStream:Token[] = [];
+        var inComment:number[] = null; // using a quick 2 element array to store where the comment starts in case I need to give a warning for it.
         var inString:boolean = false;
 
-        console.log(rows)
         for (var r = this.compiler.startRow; r <= this.compiler.endRow; r++){
             var row:string = rows[r];
-            var c = r==this.compiler.startRow?this.compiler.startColumn:0;
+            var c:number = r==this.compiler.startRow?this.compiler.startColumn:0;
 
             while ((r < this.compiler.endRow && c <row.length) || (r == this.compiler.endRow &&c <= this.compiler.endColumn)){ //can go to end of row if its not the last row
                 var nextTokenClass = this.findNextToken(row.substring(c,row.length),inString);
+                
                 if (nextTokenClass){
+
+                    // Non-string spaces get thrown out.
                     if (nextTokenClass.name == 'SPACE' && !inString){
                         c++;
                         continue;
                     }
+
                     if (nextTokenClass.name == "STARTCOMMENT"){
-                        inComment = [c+1,r+1];//labeling where comment starts incase it needs a warning
+                        inComment = [c+1,r+1]; //labeling where comment starts incase it needs a warning
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
+
                     if (nextTokenClass.name == "ENDCOMMENT"){
-                        console.log(inComment)
-                        if (inComment == null){//incase of double */
+                        if (inComment == null){ //in case of double */
                             this.error(`Unpaired [ ${nextTokenClass.lexeme} ] token at ${r+1}:${c+1}`);
                             errors++; 
                             c+=nextTokenClass.lexeme.length;
@@ -49,6 +53,7 @@ class Lexer extends Entity{
                         c+=nextTokenClass.lexeme.length;
                         continue;
                     }
+
                     if (inComment != null){
                         c++;
                         continue;
@@ -63,13 +68,16 @@ class Lexer extends Entity{
                         continue;
                     }
 
-                    var newToken = new nextTokenClass(c+1,r+1,row[c])
+                    var newToken:Token = new nextTokenClass(c+1,r+1,row[c])
                     tokenStream.push(newToken);
                     
+                    // Dynamic token is output via symbol
                     if (newToken.symbol){
                         this.info(`${nextTokenClass.name} [ ${newToken.symbol} ] found at (${r+1}:${c+1})`);
                         c = c + newToken.symbol.length
-                    }else{
+                    }
+                    // Static token is output via lexeme
+                    else{
                         console.log(newToken)
                         this.info(`${nextTokenClass.name} [ ${nextTokenClass.lexeme} ] found at (${r+1}:${c+1})`);
                         c = c + nextTokenClass.lexeme.length
@@ -85,8 +93,7 @@ class Lexer extends Entity{
         }
 
 
-        // Post Run Error CHecks
-
+        // Post Run Error Checks
         if (inComment){
             this.warn("Unclosed Comment starting at "+`${inComment[0]}:${inComment[0]}`); //add info where comment starts here
             errors++;
@@ -115,28 +122,28 @@ class Lexer extends Entity{
     }
     
     /*
-        Finds and returns the next token in the given string and the text it used
+        Finds and returns the *class* of the next token in the given string and the text it used
         Will prioritize longer token strings over smaller ones. Ex: 'print' would be returned instead of 'p' the letter
     */
     private findNextToken(line:string,inString:boolean){
 
         //finding tokens in list by whichever has the closest matching from left->right
-        var currentToken = null;
-        //searching static tokens
+        var currentTokenClass = null;
+
+        //searching static tokens for the longest lexeme match
         for (var token of TOKEN_LIST){
             if (line.substring(0,token.lexeme.length) == token.lexeme){
-                if (!currentToken || token.lexeme > currentToken.lexeme){
-                    currentToken = token;
+                if (!currentTokenClass || token.lexeme > currentTokenClass.lexeme){
+                    currentTokenClass = token;
                 }
             }
         }
-        if (currentToken != null && !inString)
-            return currentToken;
+        if (currentTokenClass != null && !inString)
+            return currentTokenClass;
         
 
         //Looking for token as a char
         if (CHAR_LIST.includes(line.charAt(0))){
-            console.log("INCLUDES "+line.charAt(0))
             if (!inString){
                 return ID
             }else{
@@ -146,12 +153,10 @@ class Lexer extends Entity{
 
         //Looking for token as a char
         if (DIGIT_LIST.includes(line.charAt(0)) && !inString){
-            console.log("INCLUDES "+line.charAt(0))
             return DIGIT;
         }
 
-        
-        return currentToken
+        return currentTokenClass
     }
 
 

@@ -1,7 +1,15 @@
+/* The lexer checks 2 general types of token classes that extend the base token: 
+'Static' Tokens which have a discrete lexeme character(s) to define them, like an EoP using $
+'Dynamic' Tokens which have variable lexeme like a digit, ID, or character
+
+*/
 class Token{
+
+    // Location of the token
     public row:number=null;
     public column:number=null;
-    
+
+    public symbol:string=null;
     constructor(column:number,row:number){
         this.row = row;
         this.column = column
@@ -148,21 +156,18 @@ const TOKEN_LIST = [
 
 // Dynamic tokens that can have multiple lexemes. 
 class ID extends Token{
-    public symbol:string;
     constructor(c:number,r:number,symbol:string){
         super(c,r)
         this.symbol=symbol;
     }
 }
 class DIGIT extends Token{
-    public symbol:string;
     constructor(c:number,r:number,symbol:string){
         super(c,r)
         this.symbol=symbol;
     }
 }
 class CHAR extends Token{
-    public symbol:string;
     constructor(c:number,r:number,symbol:string){
         super(c,r)
         this.symbol=symbol;

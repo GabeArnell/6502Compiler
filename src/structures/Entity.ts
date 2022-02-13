@@ -3,7 +3,7 @@
 class Entity{
     name:string=null;
 
-    constructor(name){
+    constructor(name:string){
         this.name= name;
     }
 

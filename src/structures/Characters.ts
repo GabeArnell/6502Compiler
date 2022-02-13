@@ -1,5 +1,5 @@
-//Characters allowed in a 
-const CHAR_LIST = [
+//Characters allowed in a string
+const CHAR_LIST:string[] = [
     'a',
     'b',
     'c',
@@ -29,7 +29,7 @@ const CHAR_LIST = [
 
 ]
 
-const DIGIT_LIST = [
+const DIGIT_LIST:string[] = [
     '0',
     '1',
     '2',
