@@ -11,9 +11,7 @@ class Lexer extends Entity{
 
     lexcode(sourceCode:string){
         this.info("Lexing program "+this.compiler.id);
-
-
-
+        
         var rows:string[] = sourceCode.split("\n");
         var errors:number = 0;
         var warnings:number = 0;
@@ -82,11 +80,23 @@ class Lexer extends Entity{
                         this.info(`${nextTokenClass.name} [ ${nextTokenClass.lexeme} ] found at (${r+1}:${c+1})`);
                         c = c + nextTokenClass.lexeme.length
                     }
-                }else{
+                }else{          
                     if (inComment == null){
+                        var badToken:string = row[c];
+
+                        // the \n and \t are popular characters that would be unrecognized but also show up invisibly on the output.
+                        // this replacement makes it easier to identify what the actual issue is
+                        switch(badToken){
+                            case('\n'):
+                                badToken = 'newline'
+                                break;
+                            case("\t"):
+                                badToken = 'tab'
+                                break;
+                        }
                         this.error(`${r+1}:${c+1} Unrecognized Token${inString?" in string ":""}: ${row[c]}`);
                         errors++;
-                    }
+                    }   
                     c++
                 }
             }
