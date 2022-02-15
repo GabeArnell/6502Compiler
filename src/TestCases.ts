@@ -32,5 +32,10 @@ $
 ['Tabs r Bad']:`{\n\tstring b = "this should not be even considered to be accurate"\t\n}$`
 ,
 ['Multiline Strings >:(']: `{\nstring a = "this should\nbe failing right?"\nb="yes"}$`
+,
+['Every Token Test']: '{/* Comment!!!*/ ()\nprint=whileif"teststring"\nintstringbooleanfalse\ntrue\n==!=+ a 0123456789}$',
 
+['Unpaired Comments']: `{/*/*This is */ "a test" *//*}$`,
+
+['Lets check your program splitter']: `{}$/*$$$ This should be ignored */$$$"the$tringstillsplits"`
 }
