@@ -1,4 +1,4 @@
-# 6502Compiler
+# 6502Compiler (Project 1 Lexer)
 Browser App for Compilers class
 
 This is a browser app writen in TypeScript, compiled into JS for usage. The sourcecode typescript is in the src folder and compiles into the /dist/js folder.
