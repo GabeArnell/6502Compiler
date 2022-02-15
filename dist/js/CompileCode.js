@@ -5,7 +5,7 @@ function initiateCompiler() {
     for (var i = 0; i < programRanges.length; i++) {
         var range = programRanges[i];
         var comp = new Compiler(givenText, i + 1, range);
-        comp.log(`Starting Compile Run: ${i + 1}/${programRanges.length}`);
+        comp.log(`\nStarting Compile Run: ${i + 1}/${programRanges.length}`);
         comp.run();
     }
 }

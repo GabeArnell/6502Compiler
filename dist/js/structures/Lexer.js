@@ -11,7 +11,7 @@ class Lexer extends Entity {
         var warnings = 0;
         var tokenStream = [];
         var inComment = null; // using a quick 2 element array to store where the comment starts in case I need to give a warning for it.
-        var inString = false;
+        var inString = null; //same for inString
         for (var r = this.compiler.startRow; r <= this.compiler.endRow; r++) {
             var row = rows[r];
             var c = r == this.compiler.startRow ? this.compiler.startColumn : 0;
@@ -44,9 +44,14 @@ class Lexer extends Entity {
                         continue;
                     }
                     if (nextTokenClass.name == "QUOTE") {
-                        inString = !inString;
+                        if (inString) {
+                            inString = null;
+                        }
+                        else {
+                            inString = [c + 1, r + 1];
+                        }
                     }
-                    else if (inString && nextTokenClass.name != "CHAR") {
+                    else if (inString && nextTokenClass.name != "CHAR" && nextTokenClass.name != "SPACE") {
                         this.error(`${r + 1}:${c + 1} Illegal Token placement in string: ${row[c]}`);
                         errors++;
                         c++;
@@ -68,21 +73,30 @@ class Lexer extends Entity {
                 }
                 else {
                     if (inComment == null) {
+                        var badToken = row[c];
+                        // the \t is a popular character that would be unrecognized but also show up invisibly on the output.
+                        // this replacement makes it easier to identify what the actual issue is.
+                        // added switchstatement for later expansion
+                        switch (badToken) {
+                            case ("\t"):
+                                badToken = 'tab';
+                                break;
+                        }
                         this.error(`${r + 1}:${c + 1} Unrecognized Token${inString ? " in string " : ""}: ${row[c]}`);
                         errors++;
                     }
                     c++;
                 }
             }
+            if (inString) {
+                this.error(`Unclosed string starting at ${inString[1]}:${inString[0]}`);
+                inString = null;
+                errors++;
+            }
         }
         // Post Run Error Checks
         if (inComment) {
-            this.warn("Unclosed Comment starting at " + `${inComment[0]}:${inComment[0]}`); //add info where comment starts here
-            errors++;
-        }
-        if (inString) {
-            var lastToken = tokenStream[tokenStream.length - 1];
-            this.error(`Unclosed string starting at ${lastToken.row}:${lastToken.column}`); //add info where comment starts here
+            this.warn("Unclosed Comment starting at " + `${inComment[1]}:${inComment[0]}`); //add info where comment starts here
             errors++;
         }
         if (tokenStream[tokenStream.length - 1].constructor.name != "EOP") {
