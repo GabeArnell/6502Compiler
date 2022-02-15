@@ -16,3 +16,6 @@ Everything needed to run the app is in the dist folder. To run, download the dis
 When functional, source code will be written into the top left text box. 
 Clicking the 'compile' button will compile the program, logging output to the topleft box and printing the final machine code in the bottom text area.
 The 'clear' button will erase the log and machinecode text boxes.
+
+BRANCHED PROJECTS
+All project submissions are in a separate branch. Check Project-1 for project 1 and so on. You can read.
