@@ -83,8 +83,11 @@
 
     let dropdownHolder = document.getElementById("testcasedropdown")
     for (let test in TEST_CASES){
-        dropdownHolder.innerHTML+=`<li><a class="dropdown-item" href="#" id = "${test}-test" >${test}</a></li>`
-        document.getElementById(`${test}-test`).onclick =()=>{
+        let option = document.createElement('li');
+        option.innerHTML=`<a class="dropdown-item" href="#" id = "${test}-test" >${test}</a>`
+        dropdownHolder.appendChild(option)
+        option.onclick =()=>{
+            console.log(test)
             document.getElementById("sourceCodeInput")['value'] = TEST_CASES[test]
         }
     }

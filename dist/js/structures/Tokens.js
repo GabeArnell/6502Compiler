@@ -84,7 +84,7 @@ const TOKEN_LIST = [
                 super(c, r);
             }
         },
-        _k.lexeme = 'print',
+        _k.lexeme = 'while',
         _k),
     (_l = class IF extends Token {
             constructor(c, r) {

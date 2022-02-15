@@ -76,7 +76,7 @@ const TOKEN_LIST = [
         }
     },
     class WHILE extends Token{
-        static lexeme:string = 'print'
+        static lexeme:string = 'while'
         constructor(c:number,r:number){
             super(c,r)
         }

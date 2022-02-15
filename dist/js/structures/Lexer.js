@@ -82,7 +82,7 @@ class Lexer extends Entity {
                                 badToken = 'tab';
                                 break;
                         }
-                        this.error(`${r + 1}:${c + 1} Unrecognized Token${inString ? " in string " : ""}: ${row[c]}`);
+                        this.error(`${r + 1}:${c + 1} Unrecognized Token${inString ? " in string " : ""}: ${badToken}`);
                         errors++;
                     }
                     c++;
