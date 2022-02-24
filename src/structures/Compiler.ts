@@ -2,9 +2,13 @@
 class Compiler extends Entity{
 
     public id:number;
-    public lex:Lexer = null;
-    public tokenlist = null;
     public sourceCode:string = null
+
+    public lex:Lexer = null;
+    public tokenStream = null;
+
+    public parse:Parser = null;
+    public cst:Tree = null
 
     // The starting and ending points in the sourcecode that mark where the program is and what can be actually compiled
     public startRow:number = null;
@@ -26,7 +30,10 @@ class Compiler extends Entity{
 
     run(){        
         this.lex = new Lexer(this);
-        this.tokenlist = this.lex.lexcode(this.sourceCode);
-        console.log(this.tokenlist)
+        this.tokenStream = this.lex.lexcode(this.sourceCode);
+        console.log(this.tokenStream)
+
+        this.parse = new Parser(this);
+        this.cst = this.parse.parseStream(this.tokenStream)
     }
 }
