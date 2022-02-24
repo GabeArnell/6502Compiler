@@ -35,8 +35,8 @@ class Tree {
         }
     }
 
-    disownChild(){
-
+    moveUp(){
+        this.current = this.current.parent;
     }
 
 }
