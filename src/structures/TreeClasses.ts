@@ -22,13 +22,16 @@ class Tree {
     addNode(kind:nodeType,label:string,token?:Token){
         let n:TreeNode = new TreeNode();
         n.name = label;
-        if (this.root == null && nodeType.root == kind){
-            this.root == n;
+        console.log("adding",n)
+        if (this.root == null && kind == nodeType.root){
+            console.log('this is a root');
+            this.root = n;
         }else{
             n.parent = this.current;
             n.parent.children.push(n)
         }
         if (kind != nodeType.leaf){
+            console.log('set current',n)
             this.current = n;
         }else{
             n.token = token;
@@ -36,7 +39,10 @@ class Tree {
     }
 
     moveUp(){
-        this.current = this.current.parent;
+        if (this.current != this.root){
+            this.current = this.current.parent;
+            console.log('set back current',this.current)
+        }
     }
 
 }

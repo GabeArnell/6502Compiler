@@ -34,6 +34,22 @@ class Compiler extends Entity{
         console.log(this.tokenStream)
 
         this.parse = new Parser(this);
-        this.cst = this.parse.parseStream(this.tokenStream)
+        this.cst = this.parse.parseStream(this.tokenStream);
+        console.log(this.cst);
+        this.printTree(this.cst)
     }
+
+
+    printTree(tree:Tree){
+
+
+        function printNode(node:TreeNode,step:number):void{
+            console.log(`${"- ".repeat(step)}[ ${node.name} ]`);
+            for (let child of node.children){
+                printNode(child,step+1);
+            }
+        }
+        printNode(tree.root,0);
+    }
+
 }
