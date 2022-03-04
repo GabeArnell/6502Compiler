@@ -15,6 +15,7 @@ class Parser extends Entity{
     }
 
     parseStream(tokenStream:Token[]):Tree{
+        this.info("Parsing program "+this.compiler.id);
         this.tree = new Tree();
         this.tokenStream = tokenStream
         this.parseProgram();
@@ -22,6 +23,7 @@ class Parser extends Entity{
             this.error(this.errorFeedback);
             return null;
         }
+        this.info("Parsing completed successfully.");
         return this.tree;
     }
 
@@ -29,10 +31,11 @@ class Parser extends Entity{
         if (this.errorFeedback) return;
         let t = this.tokenStream[this.index++];
         if (t && t.constructor.name == expected){
+            this.info("Added "+t.constructor.name+" node.")
             this.tree.addNode(nodeType.leaf,t.constructor.name,t);
         }else{
             if (t){
-                this.errorFeedback = `[ ${t.row}: ${t.column} ] Expected [ ${expected} ] found [ ${t.constructor.name} ]`
+                this.errorFeedback = `[ ${t.row}: ${t.column} ] Expected [ ${expected} ] found [ ${tokenString(t)} ]`
             }else{
                 let t = this.tokenStream[this.index-1];
                 if (t){ // will try to bump you to put the token immediatly after the first one
@@ -45,13 +48,16 @@ class Parser extends Entity{
     }
 
     parseProgram(){
-        this.tree.addNode(nodeType.root,'Goal')
+        this.info("Parsing Program.");
+        this.tree.addNode(nodeType.root,'Program')
         this.parseBlock();
         this.match("EOP");
     }
 
     parseBlock(){
         if (this.errorFeedback) return;
+        this.info("Parsing Block.");
+
         this.tree.addNode(nodeType.branch,'Block')
 
         this.match("L_BRACE");
@@ -63,6 +69,8 @@ class Parser extends Entity{
     parseStatementList(){
         if (this.errorFeedback) return;
         this.tree.addNode(nodeType.branch,'StatementList')
+        this.info("Parsing StatementList.");
+
         this.parseStatement();
         // check if blank
         if (!this.tokenStream[this.index]){
@@ -75,11 +83,12 @@ class Parser extends Entity{
         }
         this.tree.moveUp();
     }
-
+    
     parseStatement(){
         if (this.errorFeedback) return;
-        this.tree.addNode(nodeType.branch,'Statement')
+        this.info("Parsing Statement.");
 
+        this.tree.addNode(nodeType.branch,'Statement')
         switch(this.tokenStream[this.index].constructor.name){
             case("PRINT")://
                 this.parsePrintStatement();
@@ -106,6 +115,8 @@ class Parser extends Entity{
 
     parsePrintStatement(){
         if (this.errorFeedback) return;
+        this.info("Parsing PrintStatement.");
+
         this.tree.addNode(nodeType.branch,'PrintStatement')
 
         this.match("PRINT");
@@ -118,17 +129,20 @@ class Parser extends Entity{
 
     parseAssignmentStatement(){
         if (this.errorFeedback) return;
+        this.info("Parsing AssignmentStatement.");
+
         this.tree.addNode(nodeType.branch,'AssignmentStatement')
 
         this.parseId()
         this.match("ASSIGN");
         this.parseExpr();
         this.tree.moveUp();
-
     }
 
     parseVarDecl(){
         if (this.errorFeedback) return;
+        this.info("Parsing VarDecl.");
+
         this.tree.addNode(nodeType.branch,'VarDecl')
         this.parseType();
         this.parseId();
@@ -137,6 +151,8 @@ class Parser extends Entity{
 
     parseWhileStatement(){
         if (this.errorFeedback) return;
+        this.info("Parsing WhileStatement.");
+
         this.tree.addNode(nodeType.branch,'WhileStatement')
 
         this.match("WHILE");
@@ -148,6 +164,8 @@ class Parser extends Entity{
 
     parseIfStatement(){
         if (this.errorFeedback) return;
+        this.info("Parsing IfStatement.");
+
         this.tree.addNode(nodeType.branch,'IfStatement')
 
         this.match("IF");
@@ -159,6 +177,8 @@ class Parser extends Entity{
 
     parseExpr(){
         if (this.errorFeedback) return;
+        this.info("Parsing Expr.");
+
         this.tree.addNode(nodeType.branch,'Expr')
 
         if (!this.tokenStream[this.index]){
@@ -187,13 +207,15 @@ class Parser extends Entity{
 
     parseIntExpr(){
         if (this.errorFeedback) return;
+        this.info("Parsing IntExpr.");
         this.tree.addNode(nodeType.branch,'IntExpr')
 
         this.parseDigit();
         if (this.tokenStream[this.index] && this.tokenStream[this.index].constructor.name == "ADD"){
             this.parseIntOp();
-            this.parseIntExpr();
+            this.parseExpr();
         }else{
+            this.info("Only 1 digit I guess");
             //it was only 1 digit
         }
 
@@ -203,6 +225,8 @@ class Parser extends Entity{
 
     parseStringExpr(){
         if (this.errorFeedback) return;
+        this.info("Parsing StringExpr.");
+
         this.tree.addNode(nodeType.branch,'StringExpr')
 
         this.match("QUOTE");
@@ -212,9 +236,10 @@ class Parser extends Entity{
 
     }
     parseBoolExpr(){
+        if (this.errorFeedback) return;
+        this.info("Parsing BoolExpr.");
         this.tree.addNode(nodeType.branch,'BoolExpr')
 
-        if (this.errorFeedback) return;
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
                 case("T_BOOL"):
@@ -236,15 +261,20 @@ class Parser extends Entity{
     }
     parseId(){
         if (this.errorFeedback) return;
+        this.info("Parsing ID.");
+
         this.match("ID");
     }
 
     parseCharList(){
         if (this.errorFeedback) return;
+        this.info("Parsing CharList.");
+
         this.tree.addNode(nodeType.branch,'CharList')
 
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
+                case("SPACE"):
                 case("CHAR"):
                     this.parseChar();
                     this.parseCharList();
@@ -264,7 +294,8 @@ class Parser extends Entity{
 
     parseType(){
         if (this.errorFeedback) return;
-        this.tree.addNode(nodeType.branch,'Type')
+
+        //this.tree.addNode(nodeType.branch,'Type')
 
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
@@ -284,21 +315,32 @@ class Parser extends Entity{
         }else{
             //error
         }
-        this.tree.moveUp();
+        //this.tree.moveUp();
     }   
 
     parseChar(){
         if (this.errorFeedback) return;
-        this.match("CHAR")
+        this.info("Parsing CHAR.");
+        if (this.tokenStream[this.index]){
+            if (this.tokenStream[this.index].constructor.name=="SPACE"){
+                this.match("SPACE")
+            }else if (this.tokenStream[this.index].constructor.name=="CHAR"){
+                this.match("CHAR")
+            }
+            else{
+                //also error
+            }
+        }else{
+            //error
+        }
+
     }
     
-    parseSpace(){
-        if (this.errorFeedback) return;
-        this.match("SPACE")
-    }
 
     parseDigit(){
         if (this.errorFeedback) return;
+        this.info("Parsing DIGIT.");
+
         if (this.tokenStream[this.index] && DIGIT_LIST.includes(this.tokenStream[this.index].symbol)){
             this.match("DIGIT")
         }else{
@@ -308,6 +350,8 @@ class Parser extends Entity{
 
     parseBoolOp(){
         if (this.errorFeedback) return;
+        this.info("Parsing BoolOp.");
+
         if (!this.tokenStream[this.index]){
             //error
         }
@@ -323,6 +367,8 @@ class Parser extends Entity{
 
     parseBoolVal(){
         if (this.errorFeedback) return;
+        this.info("Parsing BoolVal.");
+
         this.tree.addNode(nodeType.branch,'BoolVal')
 
         if (this.tokenStream[this.index]){
@@ -341,6 +387,8 @@ class Parser extends Entity{
 
     parseIntOp(){
         if (this.errorFeedback) return;
+        this.info("Parsing IntOp.");
+
         this.match("ADD")
     }
 

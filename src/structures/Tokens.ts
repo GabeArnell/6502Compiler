@@ -16,6 +16,17 @@ class Token{
     }
 }
 
+function tokenString(t){
+    let result = `${t.constructor.name}: `;
+    if (t.lexeme){
+        result+=t.lexeme;
+    }
+    else if (t.symbol){
+        result+=t.symbol;
+    }
+    return result;
+}
+
 // List of static tokens
 const TOKEN_LIST = [
     class EOP extends Token{
