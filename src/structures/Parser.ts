@@ -43,7 +43,12 @@ class Parser extends Entity{
                 result+= `${postname}`
             }
         }
-        result += ".\nFound "+tokenString(received)
+        if (received){
+            result += ".\nFound "+tokenString(received);
+            result = `[${received.row}: ${received.column}] - `+result;
+        }else{
+            result += ".\nFound nothing."+tokenString(received)
+        }
         return result;
     }
 
@@ -109,6 +114,10 @@ class Parser extends Entity{
         this.info("Parsing Statement.");
 
         this.tree.addNode(nodeType.branch,'Statement')
+        if (!this.tokenStream[this.index]){
+            this.errorFeedback = this.expectedError(["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF"],null)
+        }
+
         switch(this.tokenStream[this.index].constructor.name){
             case("PRINT")://
                 this.parsePrintStatement();
@@ -202,7 +211,7 @@ class Parser extends Entity{
         this.tree.addNode(nodeType.branch,'Expr')
 
         if (!this.tokenStream[this.index]){
-            //error
+            this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","TRUE","FALSE","ID"],null)
         }
         switch(this.tokenStream[this.index].constructor.name){
             case("DIGIT"):
@@ -219,12 +228,14 @@ class Parser extends Entity{
             case("ID"):
                 this.parseId();
                 break;
+            default:
+                this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","TRUE","FALSE","ID"],this.tokenStream[this.index])
         }
         this.tree.moveUp();
 
     }
 
-
+    // needs the error
     parseIntExpr(){
         if (this.errorFeedback) return;
         this.info("Parsing IntExpr.");
@@ -235,7 +246,7 @@ class Parser extends Entity{
             this.parseIntOp();
             this.parseExpr();
         }else{
-            //it was only 1 digit
+            //it was only 1 digit, empty epsiol
         }
 
         this.tree.moveUp();
@@ -272,12 +283,13 @@ class Parser extends Entity{
                     this.match("R_PAREN");
                     break;
                 default:
-                    //error
-            }
+                    this.errorFeedback = this.expectedError(["T_BOOL","F_BOOL","L_PAREN"],this.tokenStream[this.index])
+                }
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["T_BOOL","F_BOOL","L_PAREN"],null)
         }
     }
+
     parseId(){
         if (this.errorFeedback) return;
         this.info("Parsing ID.");
@@ -302,10 +314,10 @@ class Parser extends Entity{
                     // marks end of charlist, 
                     break;
                 default:
-                    //error
+                    this.errorFeedback = this.expectedError(["SPACE","CHAR","QUOTE"],this.tokenStream[this.index])
             }
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["SPACE","CHAR","QUOTE"],null)
         }
         this.tree.moveUp();
 
@@ -329,10 +341,10 @@ class Parser extends Entity{
                     this.match("B_TYPE");
                     break;
                 default:
-                    //error
+                    this.errorFeedback = this.expectedError(["I_TYPE","S_TYPE","B_TYPE"],this.tokenStream[this.index])
             }
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["I_TYPE","S_TYPE","B_TYPE"],null)
         }
         //this.tree.moveUp();
     }   
@@ -347,10 +359,10 @@ class Parser extends Entity{
                 this.match("CHAR")
             }
             else{
-                //also error
+                this.errorFeedback = this.expectedError(["CHAR","SPACE"],this.tokenStream[this.index])
             }
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["CHAR","SPACE"],null)
         }
 
     }
@@ -363,7 +375,7 @@ class Parser extends Entity{
         if (this.tokenStream[this.index] && DIGIT_LIST.includes(this.tokenStream[this.index].symbol)){
             this.match("DIGIT")
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["DIGIT"],this.tokenStream[this.index])
         }
     }
 
@@ -372,7 +384,7 @@ class Parser extends Entity{
         this.info("Parsing BoolOp.");
 
         if (!this.tokenStream[this.index]){
-            //error
+            this.errorFeedback = this.expectedError(["E_BOOL_OP","NE_BOOL_OP"],this.tokenStream[this.index])
         }
         if (this.tokenStream[this.index].constructor.name=="E_BOOL_OP"){
             this.match("E_BOOL_OP");
@@ -380,7 +392,7 @@ class Parser extends Entity{
             this.match("NE_BOOL_OP");
         }
         else{
-            //also error
+            this.errorFeedback = this.expectedError(["E_BOOL_OP","NE_BOOL_OP"],this.tokenStream[this.index])
         }
     }
 
@@ -397,10 +409,10 @@ class Parser extends Entity{
                 this.match("F_BOOL");
             }
             else{
-                //also error
+                this.errorFeedback = this.expectedError(["T_BOOL","F_BOOL"],this.tokenStream[this.index])
             }
         }else{
-            //error
+            this.errorFeedback = this.expectedError(["T_BOOL","F_BOOL"],this.tokenStream[this.index])
         }
     }
 
@@ -413,7 +425,7 @@ class Parser extends Entity{
 
 
 }
-
+// first sets for a statement
 const leadTokens = {
     ['Statement']: ["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF","L_BRACE"],
 
