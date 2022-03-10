@@ -21,10 +21,30 @@ class Parser extends Entity{
         this.parseProgram();
         if (this.errorFeedback){
             this.error(this.errorFeedback);
+            this.info("Parser Failed.");
             return null;
         }
         this.info("Parsing completed successfully.");
         return this.tree;
+    }
+
+    expectedError(expectedClasses:string[], received:Token):string{
+        let result = "Expected: "
+        for (let i = 0; i < expectedClasses.length; i++){
+            let targetClass = getTokenClass(expectedClasses[i])
+            console.log(expectedClasses[i],targetClass)
+            let postname = targetClass.name;
+            if (targetClass['lexeme']){
+                postname+= ` [ ${targetClass['lexeme']} ]`
+            }
+            if (i > 0){
+                result+=` or ${postname}`
+            }else{
+                result+= `${postname}`
+            }
+        }
+        result += ".\nFound "+tokenString(received)
+        return result;
     }
 
     match(expected:string){//expected is the token name
@@ -108,7 +128,7 @@ class Parser extends Entity{
                 this.parseIfStatement();
                 break;
             default:
-                //error
+                this.errorFeedback = this.expectedError(["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF"],this.tokenStream[this.index])
         }
         this.tree.moveUp();
     }
@@ -215,7 +235,6 @@ class Parser extends Entity{
             this.parseIntOp();
             this.parseExpr();
         }else{
-            this.info("Only 1 digit I guess");
             //it was only 1 digit
         }
 

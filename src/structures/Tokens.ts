@@ -17,12 +17,13 @@ class Token{
 }
 
 function tokenString(t){
-    let result = `${t.constructor.name}: `;
-    if (t.lexeme){
-        result+=t.lexeme;
+    let result = `${t.constructor.name}`;
+    let baseClass = getTokenClass(t.constructor.name)
+    if (baseClass['lexeme']){
+        result+=`[ ${baseClass['lexeme']} ]`;
     }
     else if (t.symbol){
-        result+=t.symbol;
+        result+=`[ ${t.symbol} ]`;
     }
     return result;
 }
@@ -184,9 +185,15 @@ class CHAR extends Token{
         this.symbol=symbol;
     }
 }
+const DYNAMIC_TOKENS = [
+    ID,
+    DIGIT,
+    CHAR
+]
+
 //Lets me grab token classes for specific token creation
 function getTokenClass(className:string){
-    for (var t of TOKEN_LIST){
+    for (var t of [...TOKEN_LIST,...DYNAMIC_TOKENS]){
         if (t.name == className){
             return t;
         }
