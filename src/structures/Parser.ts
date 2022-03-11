@@ -32,7 +32,7 @@ class Parser extends Entity{
         let result = "Expected: "
         for (let i = 0; i < expectedClasses.length; i++){
             let targetClass = getTokenClass(expectedClasses[i])
-            console.log(expectedClasses[i],targetClass)
+            //console.log(expectedClasses[i],targetClass)
             let postname = targetClass.name;
             if (targetClass['lexeme']){
                 postname+= ` [ ${targetClass['lexeme']} ]`
@@ -47,8 +47,21 @@ class Parser extends Entity{
             result += ".\nFound "+tokenString(received);
             result = `[${received.row}: ${received.column}] - `+result;
         }else{
-            result += ".\nFound nothing."+tokenString(received)
+            result += ".\nFound nothing."
+            // finding current position of the last token consumed and printing the next position, where the missing token should be
+            let t = this.tokenStream[this.index-1];
+            if (t){ // will try to bump you to put the token immediatly after the first one
+                console.log('prev token',t)
+                if (t.symbol){//dynamic token runs off of symbol length
+                    result = +`[ ${t.row}: ${t.column+t.symbol.length} ] `+result
+                }
+                else { //static token runs off of lexeme link
+                    let prevClass = getTokenClass(t.constructor.name)
+                    result = `[ ${t.row}: ${t.column+prevClass['lexeme'].length} ] `+result
+                }
+            }
         }
+        console.log(result)
         return result;
     }
 
@@ -91,15 +104,19 @@ class Parser extends Entity{
         this.tree.moveUp();
     }
 
+    // NEEDS AN ERROR
     parseStatementList(){
         if (this.errorFeedback) return;
         this.tree.addNode(nodeType.branch,'StatementList')
         this.info("Parsing StatementList.");
 
         this.parseStatement();
+        if (this.errorFeedback) return;
         // check if blank
+
         if (!this.tokenStream[this.index]){
-            //error
+            this.errorFeedback = this.expectedError(['R_BRACE'],null)
+            return;
         }
         if (leadTokens.Statement.includes(this.tokenStream[this.index].constructor.name)){
             this.parseStatementList();
@@ -115,7 +132,8 @@ class Parser extends Entity{
 
         this.tree.addNode(nodeType.branch,'Statement')
         if (!this.tokenStream[this.index]){
-            this.errorFeedback = this.expectedError(["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF"],null)
+            this.errorFeedback = this.expectedError(["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF"],null);
+            return;
         }
 
         switch(this.tokenStream[this.index].constructor.name){
@@ -211,7 +229,8 @@ class Parser extends Entity{
         this.tree.addNode(nodeType.branch,'Expr')
 
         if (!this.tokenStream[this.index]){
-            this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","TRUE","FALSE","ID"],null)
+            this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","T_BOOL","F_BOOL","ID"],null)
+            return;
         }
         switch(this.tokenStream[this.index].constructor.name){
             case("DIGIT"):
@@ -221,15 +240,15 @@ class Parser extends Entity{
                 this.parseStringExpr();
                 break;
             case("L_PAREN"):
-            case("TRUE"):
-            case("FALSE"):
+            case("T_BOOL"):
+            case("F_BOOL"):
                 this.parseBoolExpr();
                 break;
             case("ID"):
                 this.parseId();
                 break;
             default:
-                this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","TRUE","FALSE","ID"],this.tokenStream[this.index])
+                this.errorFeedback = this.expectedError(["DIGIT","QUOTE","L_PAREN","T_BOOL","F_BOOL","ID"],this.tokenStream[this.index])
         }
         this.tree.moveUp();
 
@@ -385,6 +404,7 @@ class Parser extends Entity{
 
         if (!this.tokenStream[this.index]){
             this.errorFeedback = this.expectedError(["E_BOOL_OP","NE_BOOL_OP"],this.tokenStream[this.index])
+            return;
         }
         if (this.tokenStream[this.index].constructor.name=="E_BOOL_OP"){
             this.match("E_BOOL_OP");
