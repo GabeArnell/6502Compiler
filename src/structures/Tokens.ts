@@ -16,9 +16,12 @@ class Token{
     }
 }
 
-function tokenString(t){
+function tokenString(t,justLexeme:boolean=false){
     let result = `${t.constructor.name}`;
     let baseClass = getTokenClass(t.constructor.name)
+    if (justLexeme){
+        result =  ``
+    }
     if (baseClass['lexeme']){
         result+=`[ ${baseClass['lexeme']} ]`;
     }

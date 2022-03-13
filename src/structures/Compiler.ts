@@ -32,19 +32,27 @@ class Compiler extends Entity{
         this.lex = new Lexer(this);
         this.tokenStream = this.lex.lexcode(this.sourceCode);
         console.log(this.tokenStream)
+        if (!this.tokenStream){
+            this.error("Parsing skipped due to Lex errors.")
+            return
+        };
 
         this.parse = new Parser(this);
         this.cst = this.parse.parseStream(this.tokenStream);
-        console.log(this.cst);
-        this.printTree(this.cst)
+        if (this.cst){
+            this.printTree(this.cst)
+        }
     }
 
 
     printTree(tree:Tree){
-
-
+        let c = this;//need to create another poiner for compiler as 'this' cant be referenced in the function
         function printNode(node:TreeNode,step:number):void{
-            console.log(`${"- ".repeat(step)}[ ${node.name} ]`);
+            if (node.kind != nodeType.leaf){ //non-terminal
+                c.info(`${"- ".repeat(step)}[ ${node.name} ]`);
+            }else{ // terminal
+                c.info(`${"- ".repeat(step)}< ${tokenString(node.token,true)} >`);
+            }
             for (let child of node.children){
                 printNode(child,step+1);
             }

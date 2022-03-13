@@ -110,10 +110,19 @@ class Parser extends Entity{
         this.tree.addNode(nodeType.branch,'StatementList')
         this.info("Parsing StatementList.");
 
-        this.parseStatement();
         if (this.errorFeedback) return;
         // check if blank
 
+        if (!this.tokenStream[this.index]){
+            this.errorFeedback = this.expectedError(['R_BRACE'],null)
+            return;
+        }
+        if (this.tokenStream[this.index].constructor.name == "R_BRACE"){
+            //empty epsilon
+            this.tree.moveUp();
+            return;
+        }
+        this.parseStatement();
         if (!this.tokenStream[this.index]){
             this.errorFeedback = this.expectedError(['R_BRACE'],null)
             return;
@@ -153,6 +162,9 @@ class Parser extends Entity{
                 break;
             case("IF"):
                 this.parseIfStatement();
+                break;
+            case("L_BRACE"):
+                this.parseBlock()
                 break;
             default:
                 this.errorFeedback = this.expectedError(["PRINT","ID","I_TYPE","S_TYPE","B_TYPE","WHILE","IF"],this.tokenStream[this.index])
@@ -206,7 +218,6 @@ class Parser extends Entity{
         this.parseBoolExpr();
         this.parseBlock();
         this.tree.moveUp();
-
     }
 
     parseIfStatement(){
@@ -293,7 +304,8 @@ class Parser extends Entity{
             switch(this.tokenStream[this.index].constructor.name){
                 case("T_BOOL"):
                 case("F_BOOL"):
-                    this.parseBoolVal()
+                    this.parseBoolVal();
+                    break;
                 case("L_PAREN"):
                     this.match("L_PAREN");
                     this.parseExpr();

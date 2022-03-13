@@ -3,7 +3,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
     public parent:TreeNode=null;
     public children:TreeNode[] = [];
     public token:Token = null; // leaf nodes have a pointer to the token they use
-
+    public kind: nodeType;
 }
 
 enum nodeType{
@@ -22,6 +22,7 @@ class Tree {
     addNode(kind:nodeType,label:string,token?:Token){
         let n:TreeNode = new TreeNode();
         n.name = label;
+        n.kind = kind;
         console.log("adding",n)
         if (this.root == null && kind == nodeType.root){
             console.log('this is a root');

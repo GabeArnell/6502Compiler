@@ -37,5 +37,32 @@ $
 
 ['Unpaired Comments']: `{/*/*This is */ "a test" *//*}$`,
 
-['Lets check your program splitter']: `{}$/*$$$ This should be ignored */$$$"the$tringstillsplits"`
+['Lets check your program splitter']: `{}$/*$$$ This should be ignored */$$$"the$tringstillsplits"`,
+
+['Parse-o-rama']:
+`
+{/*this caused my compiler to go into an infinite loop*/
+    {}
+    {int astringb}
+    {
+    print(a)print(2)print(0+1)print(false)print(true)print("test")print((a==b))print((a!="tes t"))
+    a = aa=bb=bb=1b=1+bb="te st"b=""b=falseb=true
+    while true{
+    if (5+a=="test"){
+    
+    }
+    }
+    
+    }
+    }$
+`,
+['Parse Project Tests']: 
+`{}$
+{{{{{{}}}}}}$
+{{{{{{}}}/*comments	are	ignored	*/}}}}$
+{ /* comments are still ignored*/int@}$
+`
+
+
+
 }
