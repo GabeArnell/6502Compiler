@@ -56,13 +56,25 @@ $
     }
     }$
 `,
-['Parse Project Tests']: 
+['Project 2 Tests']: 
 `{}$
 {{{{{{}}}}}}$
 {{{{{{}}}/*comments	are	ignored	*/}}}}$
 { /* comments are still ignored*/int@}$
+`,
+["MoveUp Verification"]:
 `
+{
+    while true {
+        if (a == 2+b){
+            a = b
+        }
+    }
 
+
+}$
+
+`
 
 
 }
