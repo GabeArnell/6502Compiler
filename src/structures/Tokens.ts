@@ -16,10 +16,15 @@ class Token{
     }
 }
 
-function tokenString(t,justLexeme:boolean=false){
+/* Input a token and outputs a string description of the token. justLexeme will return only the token's lexeme and not the name
+*/
+function tokenString(t:Token,justLexeme:boolean=false){
     let result = `${t.constructor.name}`;
     let baseClass = getTokenClass(t.constructor.name)
     if (justLexeme){
+        if (t.constructor.name == "SPACE"){ 
+            return `[ *space* ]`
+        }    
         result =  ``
     }
     if (baseClass['lexeme']){

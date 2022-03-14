@@ -41,8 +41,9 @@ class Tree {
 
     moveUp(){
         if (this.current != this.root){
+            //console.log("leaving ",this.current.name)
             this.current = this.current.parent;
-            console.log('set back current',this.current)
+            console.log('set back current',this.current.name)
         }
     }
 

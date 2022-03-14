@@ -126,10 +126,10 @@ class Lexer extends Entity{
         }
 
         if (errors > 0 ){
-            this.error(`Lexing failed with ${errors} error(s) and ${warnings} warning(s).`);
+            this.error(`Lexing failed with ${errors} error(s) and ${warnings} warning(s).\n`);
             tokenStream = null;
         }else{
-            this.info(`Lexing completed with ${errors} errors and ${warnings} warning(s).`);
+            this.info(`Lexing completed with ${errors} errors and ${warnings} warning(s).\n`);
         }
 
         return tokenStream;
