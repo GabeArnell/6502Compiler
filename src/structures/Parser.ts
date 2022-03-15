@@ -24,7 +24,7 @@ class Parser extends Entity{
             this.info("Parser Failed.");
             return null;
         }
-        this.info("Parsing completed successfully.");
+        this.info("Parsing completed successfully.\n");
         return this.tree;
     }
 
@@ -45,18 +45,18 @@ class Parser extends Entity{
         }
         if (received){
             result += ".\nFound "+tokenString(received);
-            result = `[${received.row}: ${received.column}] - `+result;
+            result = `[${received.row} : ${received.column}] - `+result;
         }else{
             result += ".\nFound nothing."
             // finding current position of the last token consumed and printing the next position, where the missing token should be
             let t = this.tokenStream[this.index-1];
             if (t){ // will try to bump you to put the token immediatly after the first one
                 if (t.symbol){//dynamic token runs off of symbol length
-                    result = +`[ ${t.row}: ${t.column+t.symbol.length} ] `+result
+                    result = +`[ ${t.row} : ${t.column+t.symbol.length} ] `+result
                 }
                 else { //static token runs off of lexeme link
                     let prevClass = getTokenClass(t.constructor.name)
-                    result = `[ ${t.row}: ${t.column+prevClass['lexeme'].length} ] `+result
+                    result = `[ ${t.row} : ${t.column+prevClass['lexeme'].length} ] `+result
                 }
             }
         }
@@ -72,11 +72,11 @@ class Parser extends Entity{
             this.tree.addNode(nodeType.leaf,t.constructor.name,t);
         }else{
             if (t){
-                this.errorFeedback = `[ ${t.row}: ${t.column} ] Expected [ ${expected} ] found [ ${tokenString(t)} ]`
+                this.errorFeedback = `[ ${t.row} : ${t.column} ] Expected [ ${expected} ] found [ ${tokenString(t)} ]`
             }else{
                 let t = this.tokenStream[this.index-1];
                 if (t){ // will try to bump you to put the token immediatly after the first one
-                    this.errorFeedback = `[ ${t.row}: ${t.column+(t.symbol?t.symbol.length:t['lexeme'].length)} ] Expected [ ${expected} ] found nothing.`
+                    this.errorFeedback = `[ ${t.row} : ${t.column+(t.symbol?t.symbol.length:t['lexeme'].length)} ] Expected [ ${expected} ] found nothing.`
                 }else{
                     this.errorFeedback = `Expected [ ${expected} ] found nothing.`
                 }

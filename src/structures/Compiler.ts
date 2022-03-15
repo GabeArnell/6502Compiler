@@ -36,10 +36,11 @@ class Compiler extends Entity{
             this.warn("Parsing skipped due to Lex errors.")
             return
         };
-
+        
         this.parse = new Parser(this);
         this.cst = this.parse.parseStream(this.tokenStream);
         if (this.cst){
+            this.info("CST for program "+this.id)
             this.printTree(this.cst)
         }
     }
