@@ -10,6 +10,9 @@ class Compiler extends Entity{
     public parse:Parser = null;
     public cst:Tree = null
 
+    public semantic:SemanticAnalyser = null;
+    public ast = null;
+
     // The starting and ending points in the sourcecode that mark where the program is and what can be actually compiled
     public startRow:number = null;
     public endRow:number=null;
@@ -39,10 +42,19 @@ class Compiler extends Entity{
         
         this.parse = new Parser(this);
         this.cst = this.parse.parseStream(this.tokenStream);
-        if (this.cst){
-            this.info("CST for program "+this.id)
-            this.printTree(this.cst)
-        }
+        if (!this.cst)return;
+
+        this.info("CST for program "+this.id)
+        this.printTree(this.cst)
+
+        this.semantic = new SemanticAnalyser(this);
+        this.ast = this.semantic.parseStream(this.tokenStream);
+
+        if (!this.ast)return;
+
+        this.info("AST for program "+this.id)
+        this.printTree(this.ast)
+
     }
 
 
