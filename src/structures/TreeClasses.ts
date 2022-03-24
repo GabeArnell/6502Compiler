@@ -4,6 +4,17 @@ class TreeNode{//would have called it Node but thats already being used by some 
     public children:TreeNode[] = [];
     public token:Token = null; // leaf nodes have a pointer to the token they use
     public kind: nodeType;
+
+    public symbolTable = null;
+
+    public getSymbol(symbol:string){
+        if (!this.symbolTable || !this.symbolTable[symbol]){
+            if (this.parent == null) return null;
+            return this.parent.getSymbol(symbol);
+        }
+        return this.symbolTable[symbol]
+    }
+
 }
 
 enum nodeType{
@@ -36,6 +47,10 @@ class Tree {
             this.current = n;
         }else{
             n.token = token;
+        }
+
+        if (label =="Block"){
+            n.symbolTable = {};
         }
     }
 

@@ -42,16 +42,18 @@ class SemanticAnalyser extends Entity{
     }
 
     parseProgram(){
-        this.info("Parsing Program");
-        this.tree.addNode(nodeType.root,'Program')
-        this.parseBlock();
+        this.parseBlock(true);
     }
 
-    parseBlock(){
+    parseBlock(isRoot:boolean=false){
         if (this.errorFeedback) return;
-        this.info("Parsing Block");
 
-        this.tree.addNode(nodeType.branch,'Block')
+        if (isRoot){
+            this.tree.addNode(nodeType.root,'Block')
+        }
+        else{
+            this.tree.addNode(nodeType.branch,'Block')
+        }
 
         this.match("L_BRACE");
         this.parseStatementList();
@@ -61,14 +63,12 @@ class SemanticAnalyser extends Entity{
 
     parseStatementList(){
         if (this.errorFeedback) return;
-        this.info("Parsing StatementList");
 
         if (this.errorFeedback) return;
         // check if blank
 
         if (this.tokenStream[this.index].constructor.name == "R_BRACE"){
             //empty epsilon
-            this.tree.moveUp();
             return;
         }
         this.parseStatement();
@@ -81,7 +81,6 @@ class SemanticAnalyser extends Entity{
     
     parseStatement(){
         if (this.errorFeedback) return;
-        this.info("Parsing Statement");
         switch(this.tokenStream[this.index].constructor.name){
             case("PRINT")://
                 this.parsePrintStatement();
@@ -108,7 +107,6 @@ class SemanticAnalyser extends Entity{
 
     parsePrintStatement(){
         if (this.errorFeedback) return;
-        this.info("Parsing PrintStatement");
 
         this.tree.addNode(nodeType.branch,'PrintStatement')
 
@@ -122,7 +120,6 @@ class SemanticAnalyser extends Entity{
 
     parseAssignmentStatement(){
         if (this.errorFeedback) return;
-        this.info("Parsing AssignmentStatement");
 
         this.tree.addNode(nodeType.branch,'AssignmentStatement')
 
@@ -134,7 +131,6 @@ class SemanticAnalyser extends Entity{
 
     parseVarDecl(){
         if (this.errorFeedback) return;
-        this.info("Parsing VarDecl");
 
         this.tree.addNode(nodeType.branch,'VarDecl')
         this.parseType();
@@ -144,7 +140,6 @@ class SemanticAnalyser extends Entity{
 
     parseWhileStatement(){
         if (this.errorFeedback) return;
-        this.info("Parsing WhileStatement.");
 
         this.tree.addNode(nodeType.branch,'WhileStatement')
 
@@ -156,7 +151,6 @@ class SemanticAnalyser extends Entity{
 
     parseIfStatement(){
         if (this.errorFeedback) return;
-        this.info("Parsing IfStatement");
 
         this.tree.addNode(nodeType.branch,'IfStatement')
 
@@ -169,7 +163,6 @@ class SemanticAnalyser extends Entity{
 
     parseExpr(){
         if (this.errorFeedback) return;
-        this.info("Parsing Expr");
 
         //this.tree.addNode(nodeType.branch,'Expr')
 
@@ -195,7 +188,6 @@ class SemanticAnalyser extends Entity{
     // needs the error
     parseIntExpr(){
         if (this.errorFeedback) return;
-        this.info("Parsing IntExpr");
 
         this.parseDigit();
         if (this.tokenStream[this.index] && this.tokenStream[this.index].constructor.name == "ADD"){
@@ -210,7 +202,6 @@ class SemanticAnalyser extends Entity{
 
     parseStringExpr(){
         if (this.errorFeedback) return;
-        this.info("Parsing StringExpr.");
         this.match("QUOTE",true);
         this.parseCharList();
         this.match("QUOTE",true);
@@ -218,7 +209,6 @@ class SemanticAnalyser extends Entity{
     }
     parseBoolExpr(){
         if (this.errorFeedback) return;
-        this.info("Parsing BoolExpr");
 
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
@@ -228,10 +218,22 @@ class SemanticAnalyser extends Entity{
                     break;
                 case("L_PAREN"):
                     this.match("L_PAREN");
+
+                    /* There are two options here, either it is == or !=, ifEq or ifNEq. 
+                    However we can't tell that until we parse the expression, and we need the ifEq/ifNEq node to be on top of the expression.
+                    So we'll assume that the BoolOp is == until we get to the parseBoolOp, then if it is different we'll change the node to ifNEq
+                    */
+                    this.tree.addNode(nodeType.branch,'IfEqual')
+                    let boolOpNode = this.tree.current;
                     this.parseExpr();
-                    this.parseBoolOp();
+
+                    // This method will take the node as input and change it if it matches !=
+                    this.parseBoolOp(boolOpNode);
+
                     this.parseExpr();
+
                     this.match("R_PAREN");
+                    this.tree.moveUp()
                     break;
                 }
         }
@@ -239,14 +241,12 @@ class SemanticAnalyser extends Entity{
 
     parseId(){
         if (this.errorFeedback) return;
-        this.info("Parsing ID");
 
         this.match("ID",true);
     }
 
     parseCharList(){
         if (this.errorFeedback) return;
-        this.info("Parsing CharList");
 
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
@@ -281,7 +281,6 @@ class SemanticAnalyser extends Entity{
 
     parseChar(){
         if (this.errorFeedback) return;
-        this.info("Parsing Char");
         if (this.tokenStream[this.index]){
             if (this.tokenStream[this.index].constructor.name=="SPACE"){
                 this.match("SPACE",true)
@@ -294,26 +293,23 @@ class SemanticAnalyser extends Entity{
 
     parseDigit(){
         if (this.errorFeedback) return;
-        this.info("Parsing Digit");
         if (this.tokenStream[this.index] && DIGIT_LIST.includes(this.tokenStream[this.index].symbol)){
             this.match("DIGIT",true)
         }
     }
 
-    parseBoolOp(){
+    parseBoolOp(boolOpNode:TreeNode){
         if (this.errorFeedback) return;
-        this.info("Parsing BoolOp");
         if (this.tokenStream[this.index].constructor.name=="E_BOOL_OP"){
-            this.match("E_BOOL_OP",true);
+            this.match("E_BOOL_OP");
         }else if (this.tokenStream[this.index].constructor.name=="NE_BOOL_OP"){
-            this.match("NE_BOOL_OP",true);
+            this.match("NE_BOOL_OP");
+            boolOpNode.name = "IfNotEqual"
         }
-        
     }
 
     parseBoolVal(){
         if (this.errorFeedback) return;
-        this.info("Parsing BoolVal");
 
         if (this.tokenStream[this.index]){
             if (this.tokenStream[this.index].constructor.name=="T_BOOL"){
@@ -327,7 +323,6 @@ class SemanticAnalyser extends Entity{
 
     parseIntOp(){
         if (this.errorFeedback) return;
-        this.info("Parsing IntOp");
         this.match("ADD",true)
     }
 
