@@ -11,24 +11,60 @@ class SemanticAnalyser extends Entity{
     public index:number=0;
     public tokenStream:Token[];
     public errorFeedback:string = null;
-    
+    public warnings:number = 0;
+
     constructor(comp:Compiler){
         super("Semantic Analyser");
         this.compiler = comp;
     }
-
+    
     parseStream(tokenStream:Token[]):Tree{
         this.info("Semantic Analysis for program "+this.compiler.id);
         this.tree = new Tree();
         this.tokenStream = tokenStream
         this.parseProgram();
-        if (this.errorFeedback){
-            this.error(this.errorFeedback);
+
+        // Run through the tree and ensure all symbols are used & initialized
+        let symbolFeedback = this.searchForSymbols(this.tree.root);
+
+        if (this.errorFeedback || symbolFeedback){
+            this.error(this.errorFeedback || symbolFeedback);
             this.info("Semantic Analysis Failed.");
             return null;
         }
-        this.info("Semantic Analysis completed successfully.\n");
+    
+        this.info("Semantic Analysis completed successfully with "+this.warnings+" warning(s)\n");
         return this.tree;
+    }
+
+    searchForSymbols(node:TreeNode):string{
+        let error = null;
+        if (node.symbolTable){
+            for (let key in node.symbolTable){
+                let data = node.symbolTable[key];
+                if (data.initialization == null ){
+                    if (data.used){
+                        this.warnings++;
+                        this.warn(`[ ${data.declaration.row} : ${data.declaration.column} ] variable [ ${key} ] declared & used but not initialized.`)
+                    }else{
+                        this.warnings++;
+                        this.warn(`[ ${data.declaration.row} : ${data.declaration.column} ] variable [ ${key} ] declared but not initialized.`)    
+                    }
+                }
+                else if (data.used == false){
+                    this.warnings++;
+                    this.warn(`[ ${data.declaration.row} : ${data.declaration.column} ] variable [ ${key} ] declared but not used.`)
+                }
+            }
+        }
+        for (let child of node.children){
+            error = this.searchForSymbols(child);
+            if (error){
+                return error;
+            }
+        }
+
+        return error;
     }
 
 
@@ -36,7 +72,7 @@ class SemanticAnalyser extends Entity{
         if (this.errorFeedback) return;
         let t = this.tokenStream[this.index++];
         if (AST && t && t.constructor.name == expected){
-            this.info("Added "+t.constructor.name+" node.")
+            //this.info("Added "+t.constructor.name+" node.")
             this.tree.addNode(nodeType.leaf,t.constructor.name,t);
         }
     }
@@ -122,10 +158,24 @@ class SemanticAnalyser extends Entity{
         if (this.errorFeedback) return;
 
         this.tree.addNode(nodeType.branch,'AssignmentStatement')
-
+        let idToken = this.tokenStream[this.index]
         this.parseId()
+        
         this.match("ASSIGN");
-        this.parseExpr();
+        let usedSymbols = this.parseExpr();
+        //check if assign
+        console.log("Use symbols",usedSymbols);
+        let feedback = this.tree.current.initializeSymbol(idToken,usedSymbols)
+        if (feedback[0]){
+            this.errorFeedback = feedback[0];
+            return;
+        }
+        if (feedback[1]){
+            this.warn(feedback[1]);
+            this.warnings++
+        }
+        
+
         this.tree.moveUp();
     }
 
@@ -133,8 +183,16 @@ class SemanticAnalyser extends Entity{
         if (this.errorFeedback) return;
 
         this.tree.addNode(nodeType.branch,'VarDecl')
+        let typeToken = this.tokenStream[this.index]
         this.parseType();
+        let idToken = this.tokenStream[this.index]
         this.parseId();
+        //adding to symbol tree
+        let error = this.tree.current.addSymbol(idToken,typeToken)
+        if (error){
+            this.errorFeedback = `[ ${idToken.row} : ${idToken.column} ] `+error;
+            return;
+        }
         this.tree.moveUp();
     }
 
@@ -161,53 +219,66 @@ class SemanticAnalyser extends Entity{
 
     }
 
-    parseExpr(){
+    parseExpr(symbolList = []):any{
         if (this.errorFeedback) return;
 
         //this.tree.addNode(nodeType.branch,'Expr')
 
         switch(this.tokenStream[this.index].constructor.name){
             case("DIGIT"):
-                this.parseIntExpr();
+                this.parseIntExpr(symbolList);
+                return symbolList;
                 break;
             case("QUOTE"):
                 this.parseStringExpr();
+                return symbolList;
                 break;
             case("L_PAREN"):
             case("T_BOOL"):
             case("F_BOOL"):
-                this.parseBoolExpr();
-                break;
+                this.parseBoolExpr(symbolList);
+                return symbolList;
             case("ID"):
+                let idToken = this.tokenStream[this.index]
+                symbolList.push(idToken)
                 this.parseId();
-                break;
+                // the variable is being used in a statement
+                console.log("using")
+                this.errorFeedback = this.tree.current.useSymbol(idToken);
+                console.log(this.errorFeedback)
+                if (this.errorFeedback) return;
+                return symbolList;
         }
 
     }
 
     // needs the error
-    parseIntExpr(){
+    parseIntExpr(symbolList = []):any{
         if (this.errorFeedback) return;
 
-        this.parseDigit();
-        if (this.tokenStream[this.index] && this.tokenStream[this.index].constructor.name == "ADD"){
-            this.parseIntOp();
-            this.parseExpr();
-        }else{
-            //it was only 1 digit, empty epsiol
-        }
+        if (this.tokenStream[this.index+1].constructor.name == "ADD"){ // token after next is intop
+            this.tree.addNode(nodeType.branch,'ADD')
+            this.parseDigit();
+            this.parseIntOp(); // need this before the above node
+            return this.parseExpr(symbolList);
 
+        }else{
+            this.parseDigit();
+            return symbolList
+        }
 
     }
 
     parseStringExpr(){
         if (this.errorFeedback) return;
-        this.match("QUOTE",true);
-        this.parseCharList();
-        this.match("QUOTE",true);
-
+        let startingToken = this.tokenStream[this.index];
+        this.match("QUOTE");
+        let string =  this.parseCharList();
+        console.log(string)
+        this.tree.addNode(nodeType.branch,string,startingToken);
+        this.match("QUOTE");
     }
-    parseBoolExpr(){
+    parseBoolExpr(symbolList = []):any{
         if (this.errorFeedback) return;
 
         if (this.tokenStream[this.index]){
@@ -225,15 +296,16 @@ class SemanticAnalyser extends Entity{
                     */
                     this.tree.addNode(nodeType.branch,'IfEqual')
                     let boolOpNode = this.tree.current;
-                    this.parseExpr();
+                    this.parseExpr(symbolList);
 
                     // This method will take the node as input and change it if it matches !=
                     this.parseBoolOp(boolOpNode);
 
-                    this.parseExpr();
+                    this.parseExpr(symbolList);
 
                     this.match("R_PAREN");
                     this.tree.moveUp()
+                    return symbolList;
                     break;
                 }
         }
@@ -245,19 +317,22 @@ class SemanticAnalyser extends Entity{
         this.match("ID",true);
     }
 
-    parseCharList(){
+    parseCharList(string=""):string{
+        console.log(string)
         if (this.errorFeedback) return;
-
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
                 case("SPACE"):
-                case("CHAR"):
+                    string+=" "
                     this.parseChar();
-                    this.parseCharList();
-                    break;
+                    return this.parseCharList(string);
+                case("CHAR"):
+                    string+=this.tokenStream[this.index].symbol;
+                    this.parseChar();
+                    return this.parseCharList(string);
                 case("QUOTE")://charlist ends
                     // marks end of charlist, 
-                    break;
+                    return string;
             }
         }
     }
@@ -283,9 +358,9 @@ class SemanticAnalyser extends Entity{
         if (this.errorFeedback) return;
         if (this.tokenStream[this.index]){
             if (this.tokenStream[this.index].constructor.name=="SPACE"){
-                this.match("SPACE",true)
+                this.match("SPACE")
             }else if (this.tokenStream[this.index].constructor.name=="CHAR"){
-                this.match("CHAR",true)
+                this.match("CHAR")
             }
         }
     }
@@ -323,7 +398,7 @@ class SemanticAnalyser extends Entity{
 
     parseIntOp(){
         if (this.errorFeedback) return;
-        this.match("ADD",true)
+        this.match("ADD")
     }
 
 
