@@ -21,7 +21,7 @@ class Token{
 function tokenString(t:Token,justLexeme:boolean=false){
     let result = `${t.constructor.name}`;
     let baseClass = getTokenClass(t.constructor.name)
-    if (justLexeme){
+    if (justLexeme && (baseClass['lexeme'] || t.symbol)){
         if (t.constructor.name == "SPACE"){ 
             return `[ *space* ]`
         }    
@@ -201,11 +201,29 @@ const DYNAMIC_TOKENS = [
 
 //Lets me grab token classes for specific token creation
 function getTokenClass(className:string){
-    for (var t of [...TOKEN_LIST,...DYNAMIC_TOKENS]){
+    for (var t of [...TOKEN_LIST,...DYNAMIC_TOKENS,comparison]){
         if (t.name == className){
             return t;
         }
     }
+    
     return null;
 }
 
+class comparison extends Token{
+    constructor(c:number,r:number){
+        super(c,r)
+    }
+}
+const varType = {
+    "I_TYPE": "int",
+    "S_TYPE": "string",
+    "B_TYPE": "bool"
+}
+const staticTokenTypes = {
+    "QUOTE": "S_TYPE",
+    "F_BOOL": "B_TYPE",
+    "T_BOOL": "B_TYPE",
+    "comparison": "B_TYPE",
+    "DIGIT": "I_TYPE"
+}

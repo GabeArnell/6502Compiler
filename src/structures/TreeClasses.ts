@@ -2,7 +2,7 @@
 /*
 Symbol Table hash list
 key:{
-    type: int/string/bool
+    type: type token
     declaration: [row,column]
     initialization: [row,column]
     used: bool // if it was used in any statement besides its initialization and declaration
@@ -50,17 +50,19 @@ class TreeNode{//would have called it Node but thats already being used by some 
 
         return error;
     }
-    public initializeSymbol(idToken:Token,usedSymbolTokens:Token[]):string[]{
+    public initializeSymbol(idToken:Token,usedTokens:Token[]):string[]{
         let feedback:string[] = [null,null];// [error, warning]
         let errorMessage = `[ ${idToken.row} : ${idToken.column} ] Initialized undeclared variable [ ${idToken.symbol} ] `;
         if (this.symbolTable){
             if (this.symbolTable[idToken.symbol]){
+
                 // adding first assignment, where it is initialized
                 if (!this.symbolTable[idToken.symbol].initialization){
                     //checking to make sure that the initialization doesnt reference the symbol in the assignment like: int a a=2+a
                     //it is still technically valid however
-                    for (let token of usedSymbolTokens){
-                        if (token.symbol  == idToken.symbol){
+                    // need to fix this, just take first used token
+                    for (let token of usedTokens){
+                        if (token.symbol && token.symbol  == idToken.symbol){
                             feedback[1] = `[ ${idToken.row} : ${idToken.column} ] Initialized variable [ ${idToken.symbol} ] with itself, using its default value`;
                             break;
                         }
@@ -73,17 +75,16 @@ class TreeNode{//would have called it Node but thats already being used by some 
                 }
             }else{
                 if (this.parent == null) return [errorMessage,null];
-                feedback = this.parent.initializeSymbol(idToken,usedSymbolTokens);
+                feedback = this.parent.initializeSymbol(idToken,usedTokens);
             }
         }else{
             if (this.parent == null) return [errorMessage,null];
-            feedback = this.parent.initializeSymbol(idToken,usedSymbolTokens);
+            feedback = this.parent.initializeSymbol(idToken,usedTokens);
         }
 
         return feedback;
     }
     public useSymbol(idToken:Token):string{
-        console.log("got")
         let error:string = null;
         let undeclaredError = `[ ${idToken.row} : ${idToken.column} ] Used undeclared variable [ ${idToken.symbol} ] `;
 

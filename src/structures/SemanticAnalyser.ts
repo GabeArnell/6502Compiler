@@ -26,14 +26,15 @@ class SemanticAnalyser extends Entity{
 
         // Run through the tree and ensure all symbols are used & initialized
         let symbolFeedback = this.searchForSymbols(this.tree.root);
-
-        if (this.errorFeedback || symbolFeedback){
-            this.error(this.errorFeedback || symbolFeedback);
+        this.errorFeedback =this.errorFeedback || symbolFeedback;
+        if (this.errorFeedback){
+            this.error(this.errorFeedback);
             this.info("Semantic Analysis Failed.");
-            return null;
+            
+        }else{
+            this.info("Semantic Analysis completed successfully with "+this.warnings+" warning(s)\n");
         }
-    
-        this.info("Semantic Analysis completed successfully with "+this.warnings+" warning(s)\n");
+        
         return this.tree;
     }
 
@@ -162,9 +163,10 @@ class SemanticAnalyser extends Entity{
         this.parseId()
         
         this.match("ASSIGN");
-        let usedSymbols = this.parseExpr();
+        let usedSymbols:Token[] = this.parseExpr();
         //check if assign
         console.log("Use symbols",usedSymbols);
+        
         let feedback = this.tree.current.initializeSymbol(idToken,usedSymbols)
         if (feedback[0]){
             this.errorFeedback = feedback[0];
@@ -174,6 +176,23 @@ class SemanticAnalyser extends Entity{
             this.warn(feedback[1]);
             this.warnings++
         }
+
+        // Type checking used symbols
+        let targetSymbol = this.tree.current.getSymbol(idToken.symbol);
+        for (let token of usedSymbols){
+            let symbolData = this.tree.current.getSymbol(token.symbol);
+            if (symbolData){
+                if (symbolData.type != targetSymbol.type){
+                    this.errorFeedback = `[ ${token.row} : ${token.column} ] Type missmatch: Used ${varType[symbolData.type]} variable [ ${token.symbol} ] in assigning ${varType[targetSymbol.type]} variable [ ${idToken.symbol} ]`
+                    return;
+                }else{
+                    console.log('matches',symbolData.type , targetSymbol.type)
+                }
+            }else{
+                console.log("No symbol data, should have errored out before we got here.")
+            }
+        }
+
         
 
         this.tree.moveUp();
@@ -188,6 +207,7 @@ class SemanticAnalyser extends Entity{
         let idToken = this.tokenStream[this.index]
         this.parseId();
         //adding to symbol tree
+        console.log(typeToken,typeToken.constructor.name)
         let error = this.tree.current.addSymbol(idToken,typeToken)
         if (error){
             this.errorFeedback = `[ ${idToken.row} : ${idToken.column} ] `+error;
@@ -203,6 +223,7 @@ class SemanticAnalyser extends Entity{
 
         this.match("WHILE");
         this.parseBoolExpr();
+        if (this.errorFeedback) return;
         this.parseBlock();
         this.tree.moveUp();
     }
@@ -214,79 +235,110 @@ class SemanticAnalyser extends Entity{
 
         this.match("IF");
         this.parseBoolExpr();
+        if (this.errorFeedback) return;
         this.parseBlock();
         this.tree.moveUp();
 
     }
 
-    parseExpr(symbolList = []):any{
+    parseExpr(tokenList = []):any{
         if (this.errorFeedback) return;
 
         //this.tree.addNode(nodeType.branch,'Expr')
 
         switch(this.tokenStream[this.index].constructor.name){
             case("DIGIT"):
-                this.parseIntExpr(symbolList);
-                return symbolList;
+                tokenList=this.parseIntExpr(tokenList);
+                return tokenList;
                 break;
             case("QUOTE"):
-                this.parseStringExpr();
-                return symbolList;
+                this.parseStringExpr(tokenList);
+                return tokenList;
                 break;
             case("L_PAREN"):
             case("T_BOOL"):
             case("F_BOOL"):
-                this.parseBoolExpr(symbolList);
-                return symbolList;
+                this.parseBoolExpr(tokenList);
+                return tokenList;
             case("ID"):
                 let idToken = this.tokenStream[this.index]
-                symbolList.push(idToken)
+                tokenList.push(idToken)
                 this.parseId();
                 // the variable is being used in a statement
                 console.log("using")
                 this.errorFeedback = this.tree.current.useSymbol(idToken);
                 console.log(this.errorFeedback)
                 if (this.errorFeedback) return;
-                return symbolList;
+                return tokenList;
         }
 
     }
 
     // needs the error
-    parseIntExpr(symbolList = []):any{
+    parseIntExpr(tokenList = []):any{
         if (this.errorFeedback) return;
 
         if (this.tokenStream[this.index+1].constructor.name == "ADD"){ // token after next is intop
             this.tree.addNode(nodeType.branch,'ADD')
             this.parseDigit();
             this.parseIntOp(); // need this before the above node
-            return this.parseExpr(symbolList);
+            let usedTokens = this.parseExpr([])
+            for (let t of usedTokens){
+                console.log('checking',t)
+                if (t.constructor.name == "DIGIT" || (t.symbol && this.tree.current.getSymbol(t.symbol).type=="I_TYPE")){
+                    //valid
+                }
+                else{
+                    this.errorFeedback= `[ ${t.row} : ${t.column} ] Type error. `
+                    switch(t.constructor.name){
+                        case("QUOTE"): // string
+                            this.errorFeedback += `Used string [ ${t.string} ] in int expression. Can only use int variables or digits.`
+                            break;
+                        case("F_BOOL"):
+                        case("T_BOOL"):
+                            this.errorFeedback += `Used boolean [ ${t.constructor.lexeme} ] in int expression. Can only use int variables or digits.`
+                            break;
+                        case("ID"):
+                            let wrongType = this.tree.current.getSymbol(t.symbol).type
+                            this.errorFeedback += `Used ${varType[wrongType]} variable [ ${t.symbol} ] in int expression. Can only use int variables or digits.`
+                            break;
+                    }
+                    return;
+                }
+            }
+
+            return [...tokenList,...usedTokens];
 
         }else{
+            let digit = this.tokenStream[this.index]
             this.parseDigit();
-            return symbolList
+            tokenList.push(digit)
+            return tokenList
         }
 
     }
 
-    parseStringExpr(){
+    parseStringExpr(tokenList=[]){
         if (this.errorFeedback) return;
         let startingToken = this.tokenStream[this.index];
         this.match("QUOTE");
         let string =  this.parseCharList();
         console.log(string)
+        startingToken['string'] = string;
+        tokenList.push(startingToken);
         this.tree.addNode(nodeType.branch,string,startingToken);
         this.match("QUOTE");
     }
-    parseBoolExpr(symbolList = []):any{
+    parseBoolExpr(tokenList = []):any{
         if (this.errorFeedback) return;
 
         if (this.tokenStream[this.index]){
             switch(this.tokenStream[this.index].constructor.name){
                 case("T_BOOL"):
                 case("F_BOOL"):
+                    tokenList.push(this.tokenStream[this.index])
                     this.parseBoolVal();
-                    break;
+                    return tokenList;
                 case("L_PAREN"):
                     this.match("L_PAREN");
 
@@ -296,17 +348,47 @@ class SemanticAnalyser extends Entity{
                     */
                     this.tree.addNode(nodeType.branch,'IfEqual')
                     let boolOpNode = this.tree.current;
-                    this.parseExpr(symbolList);
+                    let leftList = []; //
+                    let rightList = [];
+                    leftList=this.parseExpr();
 
                     // This method will take the node as input and change it if it matches !=
                     this.parseBoolOp(boolOpNode);
 
-                    this.parseExpr(symbolList);
+                    rightList=this.parseExpr();
+                    //checking that the used types match. As it is recursive, we only really need to check the first in every array.
+                    let leftToken = leftList[0];
+                    let rightToken = rightList[0];
+                    console.log(leftList,'vs',rightList)
+                    if (leftToken.constructor.name == rightToken.constructor.name && leftToken.constructor.name != 'ID'){
+                        // valid case, either a DIGIT, QUOTE(string header), are working
+                    }
+                    else if (leftToken.constructor.name.toLowerCase().includes("bool") && rightToken.constructor.name.toLowerCase().includes("bool")){
+                        // valid case, leftToken and rightToken are either true or false, or the placeholder boolexperession
+                    }else{
+                        // checking the actual types
+                        let leftType:string,rightType:string;
+                        if (this.tree.current.getSymbol(leftToken.symbol)){
+                            leftType = this.tree.current.getSymbol(leftToken.symbol).type;
+                        }else{
+                            leftType=staticTokenTypes[leftToken.constructor.name]
+                        }
+                        if (this.tree.current.getSymbol(rightToken.symbol)){
+                            rightType = this.tree.current.getSymbol(rightToken.symbol).type;
+                        }else{
+                            rightType=staticTokenTypes[rightToken.constructor.name]
+                        }
+                        if (leftType != rightType){
+                            this.errorFeedback = `Type missmatch: compared ${varType[leftType]} ${tokenString(leftToken,true)} [ ${leftToken.row} : ${leftToken.column} ] to ${varType[rightType]} ${tokenString(rightToken,true)} [ ${rightToken.row} : ${rightToken.column} ]`
+                            return;
+                        }
+                    }
 
                     this.match("R_PAREN");
                     this.tree.moveUp()
-                    return symbolList;
-                    break;
+                    let boolPlaceholder = new comparison(leftToken.column,rightToken.row)
+                    tokenList.push(boolPlaceholder);
+                    return tokenList;
                 }
         }
     }
@@ -366,9 +448,10 @@ class SemanticAnalyser extends Entity{
     }
     
 
-    parseDigit(){
+    parseDigit(tokenList=[]){
         if (this.errorFeedback) return;
         if (this.tokenStream[this.index] && DIGIT_LIST.includes(this.tokenStream[this.index].symbol)){
+            tokenList.push(this.tokenStream[this.index]);
             this.match("DIGIT",true)
         }
     }
@@ -383,13 +466,15 @@ class SemanticAnalyser extends Entity{
         }
     }
 
-    parseBoolVal(){
+    parseBoolVal(tokenList=[]){
         if (this.errorFeedback) return;
 
         if (this.tokenStream[this.index]){
             if (this.tokenStream[this.index].constructor.name=="T_BOOL"){
+                tokenList.push(this.tokenStream[this.index])
                 this.match("T_BOOL",true);
             }else if (this.tokenStream[this.index].constructor.name=="F_BOOL"){
+                tokenList.push(this.tokenStream[this.index])
                 this.match("F_BOOL",true);
             }
             
