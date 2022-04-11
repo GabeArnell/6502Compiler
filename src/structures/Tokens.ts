@@ -33,6 +33,12 @@ function tokenString(t:Token,justLexeme:boolean=false){
     else if (t.symbol){
         result+=`[ ${t.symbol} ]`;
     }
+
+    // special case for concatonated strings in AST
+    if (t.constructor.name == "QUOTE" && t['string']){
+        justLexeme==false?result=`string`:result='';
+        result+=`[ ${t['string']} ]`;
+    }
     return result;
 }
 

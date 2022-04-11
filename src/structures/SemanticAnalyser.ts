@@ -164,6 +164,7 @@ class SemanticAnalyser extends Entity{
         
         this.match("ASSIGN");
         let usedSymbols:Token[] = this.parseExpr();
+        if (this.errorFeedback) return;
         //check if assign
         console.log("Use symbols",usedSymbols);
         
@@ -306,7 +307,7 @@ class SemanticAnalyser extends Entity{
                     return;
                 }
             }
-
+            this.tree.moveUp();
             return [...tokenList,...usedTokens];
 
         }else{
@@ -328,6 +329,7 @@ class SemanticAnalyser extends Entity{
         tokenList.push(startingToken);
         this.tree.addNode(nodeType.branch,string,startingToken);
         this.match("QUOTE");
+        this.tree.moveUp();
     }
     parseBoolExpr(tokenList = []):any{
         if (this.errorFeedback) return;

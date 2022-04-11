@@ -56,13 +56,23 @@ class TreeNode{//would have called it Node but thats already being used by some 
         if (this.symbolTable){
             if (this.symbolTable[idToken.symbol]){
 
+                for (let token of usedTokens){
+                    if (token.constructor.name == "ID" && this.getSymbol(token.symbol).type != this.symbolTable[idToken.symbol].type){
+                        feedback[0] = `[ ${idToken.row} : ${idToken.column} ] Type missmatch: Used ${varType[this.getSymbol(token.symbol).type]} variable [ ${token.symbol} ] in assigning ${varType[this.symbolTable[idToken.symbol].type]} variable [ ${idToken.symbol} ] `;
+                        return feedback;
+                    }
+                    else if (this.symbolTable[idToken.symbol].type != staticTokenTypes[token.constructor.name]){
+                        feedback[0] = `[ ${idToken.row} : ${idToken.column} ] Type missmatch: Used ${varType[staticTokenTypes[token.constructor.name]]} ${tokenString(token,true)} in assigning ${varType[this.symbolTable[idToken.symbol].type]} variable [ ${idToken.symbol} ] `;
+                    }
+                }
+
                 // adding first assignment, where it is initialized
                 if (!this.symbolTable[idToken.symbol].initialization){
                     //checking to make sure that the initialization doesnt reference the symbol in the assignment like: int a a=2+a
                     //it is still technically valid however
                     // need to fix this, just take first used token
                     for (let token of usedTokens){
-                        if (token.symbol && token.symbol  == idToken.symbol){
+                        if (token.symbol && token.symbol == idToken.symbol){
                             feedback[1] = `[ ${idToken.row} : ${idToken.column} ] Initialized variable [ ${idToken.symbol} ] with itself, using its default value`;
                             break;
                         }
