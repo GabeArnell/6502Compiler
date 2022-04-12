@@ -74,7 +74,56 @@ $
 
 }$
 
+`,
+["AST Trio"]: 
+`{
+int a
+a = 1
+print(a)
+}$`,
+['AST Conditionals']: 
 `
+{
+int a
+a = 1
+if (2+a == 2){
+    a = 1
+}
+while false {
 
+}
+}$    
+`,
+['Symbol Scopes']: 
+`/**This should break on a but allow b to go through**/
+{
+int b
+int a
+{
+    string b
+}
+string a
+}$`,
+['Self Initialization']: 
+`
+{
+/*This should give a warning as the initialization is using the uninitialized value*/
+int a
+a = 2+a
+boolean b
+b = (false == b)
+
+
+}$
+`,
+'Comparison Type Checking':
+`
+{
+if ((2+2==4)!=("hi"=="hello")){
+    print("correct")
+}
+}$
+
+`
 
 }
