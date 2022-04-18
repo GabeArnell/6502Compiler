@@ -22,6 +22,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
     public getSymbol(symbol:string){
         if (!this.symbolTable || !this.symbolTable[symbol]){
             if (this.parent == null) return null;
+            console.log('cant find ',symbol,'checking parent')
             return this.parent.getSymbol(symbol);
         }
         return this.symbolTable[symbol]
@@ -50,14 +51,13 @@ class TreeNode{//would have called it Node but thats already being used by some 
 
         return error;
     }
-    public initializeSymbol(idToken:Token,usedTokens:Token[]):string[]{
+    public initializeSymbol(idToken:Token,usedTokens:Token[],startingBlock:TreeNode):string[]{
         let feedback:string[] = [null,null];// [error, warning]
         let errorMessage = `[ ${idToken.row} : ${idToken.column} ] Initialized undeclared variable [ ${idToken.symbol} ] `;
         if (this.symbolTable){
             if (this.symbolTable[idToken.symbol]){
-
                 for (let token of usedTokens){
-                    if (token.constructor.name == "ID" && this.getSymbol(token.symbol).type != this.symbolTable[idToken.symbol].type){
+                    if (token.constructor.name == "ID" && startingBlock.getSymbol(token.symbol).type != this.symbolTable[idToken.symbol].type){
                         feedback[0] = `[ ${idToken.row} : ${idToken.column} ] Type missmatch: Used ${varType[this.getSymbol(token.symbol).type]} variable [ ${token.symbol} ] in assigning ${varType[this.symbolTable[idToken.symbol].type]} variable [ ${idToken.symbol} ] `;
                         return feedback;
                     }
@@ -85,11 +85,11 @@ class TreeNode{//would have called it Node but thats already being used by some 
                 }
             }else{
                 if (this.parent == null) return [errorMessage,null];
-                feedback = this.parent.initializeSymbol(idToken,usedTokens);
+                feedback = this.parent.initializeSymbol(idToken,usedTokens,startingBlock);
             }
         }else{
             if (this.parent == null) return [errorMessage,null];
-            feedback = this.parent.initializeSymbol(idToken,usedTokens);
+            feedback = this.parent.initializeSymbol(idToken,usedTokens,startingBlock);
         }
 
         return feedback;
