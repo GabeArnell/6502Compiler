@@ -61,7 +61,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
                         feedback[0] = `[ ${idToken.row} : ${idToken.column} ] Type missmatch: Used ${varType[this.getSymbol(token.symbol).type]} variable [ ${token.symbol} ] in assigning ${varType[this.symbolTable[idToken.symbol].type]} variable [ ${idToken.symbol} ] `;
                         return feedback;
                     }
-                    else if (this.symbolTable[idToken.symbol].type != staticTokenTypes[token.constructor.name]){
+                    else if (token.constructor.name != "ID" && this.symbolTable[idToken.symbol].type != staticTokenTypes[token.constructor.name]){
                         feedback[0] = `[ ${idToken.row} : ${idToken.column} ] Type missmatch: Used ${varType[staticTokenTypes[token.constructor.name]]} ${tokenString(token,true)} in assigning ${varType[this.symbolTable[idToken.symbol].type]} variable [ ${idToken.symbol} ] `;
                     }
                 }
