@@ -167,8 +167,8 @@ class SemanticAnalyser extends Entity{
         if (this.errorFeedback) return;
         //check if assign
         console.log("Use symbols",usedSymbols);
-        
-        let feedback = this.tree.current.initializeSymbol(idToken,usedSymbols)
+        console.log('current',this.tree.current)
+        let feedback = this.tree.current.initializeSymbol(idToken,usedSymbols,this.tree.current)
         if (feedback[0]){
             this.errorFeedback = feedback[0];
             return;
@@ -178,23 +178,7 @@ class SemanticAnalyser extends Entity{
             this.warnings++
         }
 
-        // Type checking used symbols
-        let targetSymbol = this.tree.current.getSymbol(idToken.symbol);
-        for (let token of usedSymbols){
-            let symbolData = this.tree.current.getSymbol(token.symbol);
-            if (symbolData){
-                if (symbolData.type != targetSymbol.type){
-                    this.errorFeedback = `[ ${token.row} : ${token.column} ] Type missmatch: Used ${varType[symbolData.type]} variable [ ${token.symbol} ] in assigning ${varType[targetSymbol.type]} variable [ ${idToken.symbol} ]`
-                    return;
-                }else{
-                    console.log('matches',symbolData.type , targetSymbol.type)
-                }
-            }else{
-                console.log("No symbol data, should have errored out before we got here.")
-            }
-        }
-
-        
+       
 
         this.tree.moveUp();
     }
