@@ -96,7 +96,7 @@ class Compiler extends Entity{
                 c.info(`${"- ".repeat(step)}[ ${node.name} ]`);
                 for (let key in node.symbolTable){
                     let symbolData = node.symbolTable[key];
-                    c.info(`${"- ".repeat(step)}<${key}> | ${varType[symbolData.type]}`);
+                    c.info(`${"- ".repeat(step)}<${key}> | ${varType[symbolData.type]} | [ ${symbolData.declaration.row} : ${symbolData.declaration.column} ] | ${symbolData.used?"used":"not used"}`);
                 }
             }
             for (let child of node.children){
