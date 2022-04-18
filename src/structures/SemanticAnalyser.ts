@@ -177,7 +177,6 @@ class SemanticAnalyser extends Entity{
             this.warn(feedback[1]);
             this.warnings++
         }
-
        
 
         this.tree.moveUp();
