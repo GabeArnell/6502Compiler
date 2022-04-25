@@ -38,7 +38,8 @@ class TreeNode{//would have called it Node but thats already being used by some 
                     type: typeToken.constructor.name,
                     declaration: idToken,
                     initialization: null,
-                    used: false
+                    used: false,
+                    tempPosition: null,// for code generation
                 }
                 console.log(this.symbolTable);
             }else{
@@ -51,6 +52,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
 
         return error;
     }
+
     public initializeSymbol(idToken:Token,usedTokens:Token[],startingBlock:TreeNode):string[]{
         let feedback:string[] = [null,null];// [error, warning]
         let errorMessage = `[ ${idToken.row} : ${idToken.column} ] Initialized undeclared variable [ ${idToken.symbol} ] `;
@@ -152,6 +154,9 @@ class Tree {
         if (kind != nodeType.leaf){
             //console.log('set current',n)
             this.current = n;
+            if (token){
+                n.token = token
+            }
         }else{
             n.token = token;
         }

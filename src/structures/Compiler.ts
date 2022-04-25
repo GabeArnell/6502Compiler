@@ -13,6 +13,9 @@ class Compiler extends Entity{
     public semantic:SemanticAnalyser = null;
     public ast = null;
 
+    public generator:CodeGenerator = null;
+    public machineCode:string[] = null;
+
     // The starting and ending points in the sourcecode that mark where the program is and what can be actually compiled
     public startRow:number = null;
     public endRow:number=null;
@@ -70,6 +73,15 @@ class Compiler extends Entity{
         }
         this.info("Symbol Table for program "+this.id)
         this.printSymbolTable(this.ast);
+        this.info("")
+        this.generator = new CodeGenerator(this);
+        this.machineCode = this.generator.genCode(this.ast);
+        if (this.generator.errorFeedback){
+            this.info("INCOMPLETE MACHINE CODE for program "+this.id)
+            this.info("")
+            //this.warn("Code Generation skipped due to Semantic Analysis error.")
+        }
+        document.getElementById('machineCodeOutput').innerText = this.machineCode.join(" ")
     }
 
 
