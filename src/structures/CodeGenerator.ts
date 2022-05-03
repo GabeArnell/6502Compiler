@@ -25,6 +25,9 @@ class CodeGenerator extends Entity{
 
     public nextTemp = 0;
 
+    public trueStringPosition:number = null
+    public falseStringPosition:number = null
+
     constructor(comp:Compiler){
         super("Code Generator");
         this.compiler = comp;
@@ -40,24 +43,53 @@ class CodeGenerator extends Entity{
 
         //writes all strings to heap
         this.machineCode[0xFF]="00";//marking the temp holder
+        //adding true
+        this.machineCode[0xFE]='00'
+        this.machineCode[0xFD]='65'
+        this.machineCode[0xFC]='75'
+        this.machineCode[0xFB]='72'
+        this.machineCode[0xFA]='74'
+        this.trueStringPosition = 0xFA
+        this.heapOffset+=5;
+        this.machineCode[0xF9]='00'
+        this.machineCode[0xF8]='65'
+        this.machineCode[0xF7]='73'
+        this.machineCode[0xF6]='6C'
+        this.machineCode[0xF5]='61'
+        this.machineCode[0xF4]='66'
+        this.heapOffset+=6;
+        this.falseStringPosition = 0xF4
 
         this.collectStrings();
 
         this.genNext();
+        
+        //add final 00 break
+        this.addOp(0x00,this.nextCode++);
+
+        // replace all S0 temp strings swith the position of the above final break
+
 
         //Adding static offset STILL NEED ERROR CHECKING FOR OVERLAP!
         this.addStack();
+
         if (this.errorFeedback){
             this.error(this.errorFeedback);
             this.info("Code Generation Failed.");
         }else{
             this.info("Code Generation completed successfully with "+this.warnings+" warning(s)\n");
         }
+        // fill in rest with 00s
+        for (let i = 0; i < this.machineCode.length; i++){
+            if (this.machineCode[i] == null){
+                this.machineCode[i] = "00"
+            }
+        }
         
         return this.machineCode;
     }
 
-/*
+    /*
     replaceBytes(targetString:string,newString:string){
         for (let i = 0; i < this.machineCode.length;i++){
             if (this.machineCode[i] && this.machineCode[i] == targetString){
@@ -75,6 +107,12 @@ class CodeGenerator extends Entity{
             case("VarDecl"):
                 this.genVarDecl();
                 break;
+            case("AssignmentStatement"):
+                this.genAssignmentStatement();
+                break;
+            case("PrintStatement"):
+                this.genPrintStatement();
+                break;
     }
     }
     genBlock(){
@@ -86,7 +124,6 @@ class CodeGenerator extends Entity{
         this.AST.current = block
     }
 
-    // THIS NEEDS TO DEFAULT STRINGS TO SOME 0 CONSTANT
     genVarDecl(){
 
         let typeNode:TreeNode = this.AST.current.children[0];
@@ -104,7 +141,7 @@ class CodeGenerator extends Entity{
             if (this.heapOffset > 1){ //heap offset is > 1 if a string is ever actually used, if it is not then we just make the pointer point to 00 because it will never be used
                 this.addOp(0xFF-1,this.nextCode++); // if a heap exists, 0xFE will always be the 00 as it has to null terminate the first string stored
             }else{
-                this.addOp(0x00,this.nextCode++); // constant is zero 
+                this.addTempOp("S0",this.nextCode++); // S0 will be replaced with the final halt before the stack 
             }
         }else{
             this.addTempOp("T"+symbolData.tempPosition,this.nextCode++); //TMP position
@@ -114,8 +151,159 @@ class CodeGenerator extends Entity{
         
     }
 
+    genAssignmentStatement(){
+        let symbolNode:TreeNode = this.AST.current.children[0];
+        let valueNode:TreeNode = this.AST.current.children[1];
 
-    
+        if (valueNode.name == "ID"){
+            // grab from memory if child 1 is the variable
+
+        }
+        /* child 2 is either a variable/literal or addition/comparison
+        if comparison/addition, call the addition function and load it to accumulator
+
+        */
+    }
+
+    genPrintStatement(){
+        let child = this.AST.current.children[0];
+        console.log('printing: ',child.name)
+        switch(child.name){
+            case("DIGIT"):
+                this.printInt();
+                break;
+            case("T_BOOL"):
+            case("F_BOOL"):
+                this.printBool();
+                break;
+            case("ID"):
+                this.printID();
+                break;
+            default:
+                this.printString();
+                break;
+
+        }
+    }
+
+    // TO DO, FINISH PRINTING B type INTERGERS
+    printID(){
+        let child = this.AST.current.children[0];
+        let token = child.token;
+        let symbol = token.symbol; // the number
+        let symbolData = this.AST.current.getSymbol(symbol);
+        switch(symbolData.type){
+            case("I_TYPE"):
+                this.addOp(0xA2,this.nextCode++); // Load X register with constant
+                this.addOp(0x01,this.nextCode++); // constant = 1
+                this.addOp(0xAC,this.nextCode++); // load y register from memory
+                this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
+                this.addOp(0x00,this.nextCode++); // load y register from memory
+                break;
+            case("S_TYPE"):
+                this.addOp(0xA2,this.nextCode++); // Load X register with constant
+                this.addOp(0x02,this.nextCode++); // constant = 1
+                this.addOp(0xAC,this.nextCode++); // load y register from memory
+                this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
+                this.addOp(0x00,this.nextCode++); // load y register from memory
+                break;
+            case("B_TYPE"):
+                // first need a check if it is false or true
+                // we'll compare the byte it points to to 1
+                this.addOp(0xA2,this.nextCode++); // Load X register with constant
+                this.addOp(0x01,this.nextCode++); // constant = 1
+                this.addOp(0xEC,this.nextCode++); // Compare X reg to memory
+                this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
+                this.addOp(0x00,this.nextCode++); 
+                this.addOp(0xD0,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+                this.addOp(/*Need to check*/0x0A,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+                // true on equals, does not skip
+                {
+                    this.addOp(0xA2,this.nextCode++); // Load X register with constant
+                    this.addOp(0x02,this.nextCode++); // constant = 2
+                    this.addOp(0xA0,this.nextCode++); // Load y register with constant
+                    this.addOp(this.trueStringPosition,this.nextCode++);
+                    this.addOp(0xFF,this.nextCode++); // make the system call
+                    //then we need to skip over the false portion
+                    this.addOp(0xEC,this.nextCode++); // Compare X reg to first memory bit, which can not be 00
+                    this.addOp(0x00,this.nextCode++); 
+                    this.addOp(0x00,this.nextCode++);
+                    this.addOp(0xD0,this.nextCode++); //jump a number of bytes ahead to skip false
+                    this.addOp(/*NEEDS TO check*/0x05,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+                }
+                // false on not equals
+                {
+                    this.addOp(0xA2,this.nextCode++); // Load X register with constant
+                    this.addOp(0x02,this.nextCode++); // constant = 2
+                    this.addOp(0xA0,this.nextCode++); // Load y register with constant
+                    this.addOp(this.falseStringPosition,this.nextCode++);
+                    this.addOp(0xFF,this.nextCode++); // make the system call
+                }
+        }
+    }
+    printInt(){
+        let child = this.AST.current.children[0];
+        let token = child.token;
+        let symbol = token.symbol; // the number
+        this.addOp(0xA2,this.nextCode++); // Load X register with constant
+        this.addOp(0x01,this.nextCode++); // constant = 1
+        this.addOp(0xA0,this.nextCode++); // Load y register with constant
+        this.addOp(parseInt(symbol),this.nextCode++); // constant being the symbol
+        this.addOp(0xFF,this.nextCode++); // make the system call
+    }
+    printString(){
+        let child = this.AST.current.children[0];
+        let string = child.name
+        let position = this.stringMap.get(string);
+        this.addOp(0xA2,this.nextCode++); // Load X register with constant
+        this.addOp(0x02,this.nextCode++); // constant = 2
+        this.addOp(0xA0,this.nextCode++); // Load y register with constant
+        this.addOp(position,this.nextCode++); // make the constant the string substitute
+        this.addOp(0xFF,this.nextCode++); // make the system call
+    }
+    printBool(){
+        let child = this.AST.current.children[0];
+        this.addOp(0xA2,this.nextCode++); // Load X register with constant
+        this.addOp(0x02,this.nextCode++); // constant = 2
+        this.addOp(0xA0,this.nextCode++); // Load y register with constant
+        if (child.name == "T_BOOL"){
+            this.addOp(this.trueStringPosition,this.nextCode++);
+        }else{
+            this.addOp(this.falseStringPosition,this.nextCode++);
+        }
+
+        this.addOp(0xFF,this.nextCode++); // make the system call
+    }
+    printComparison(){
+
+    }
+    printAddition(){
+
+    }
+
+    genIfStatement(){
+
+    }
+
+    genWhileStatement(){
+
+    }
+
+    genAddition(){
+        // current node(And) has 2 children, one is a digit, the other is a digit/id/add statement
+        /*
+            if 2nd is an add statement, call the add statement here, the final value should be in accumulator 
+
+        */
+        // add both and plop it into the accumulator
+    }
+
+    //load variable into accumulator
+    genVariableGetter(){
+        
+    }
+
+
     addOp(opcode:number,position:number,overide:boolean=false){
         if (position < 0 || position > 256){
             this.errorFeedback = "Invalid Position: "+position+ " is not a valid memory position"
@@ -129,7 +317,6 @@ class CodeGenerator extends Entity{
         if (stringCode.length < 2){
             stringCode = "0"+stringCode;
         }
-        stringCode = "0x"+stringCode;
         this.machineCode[position] = stringCode
     }
     addTempOp(opstring:string,position:number){
@@ -175,13 +362,17 @@ class CodeGenerator extends Entity{
 
     }
 
-    //
+    // need to add a default place for strings to be pointed towards that has 00. So that if it prints nothing is output
     collectStrings(){
-        
         let gen = this;
+
+        gen.stringMap.set('true',0xFA)
+        gen.log("Stored string [ true ] at position "+0xFA.toString(16).toUpperCase())
+
         function iterate(node:TreeNode):void{
             console.log(node)
-            if (node.token && node.token['string']){ //non-terminal
+            //terminal string that has not been set yet
+            if (node.token && node.token['string'] && gen.stringMap.get(node.name) == null){ 
                 let string = node.name;
                 gen.addOp(0x00,0xFF-gen.heapOffset)
                 gen.heapOffset++;
@@ -191,7 +382,7 @@ class CodeGenerator extends Entity{
                 }
                 let startingPosition = 0xFF-gen.heapOffset+1;
                 gen.log("Stored string [ "+string+" ] at position "+startingPosition.toString(16).toUpperCase())
-                this.stringMap.set(string,startingPosition)
+                gen.stringMap.set(string,startingPosition)
             }
             for (let child of node.children){
                 iterate(child);
