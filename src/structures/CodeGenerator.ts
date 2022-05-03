@@ -154,15 +154,42 @@ class CodeGenerator extends Entity{
     genAssignmentStatement(){
         let symbolNode:TreeNode = this.AST.current.children[0];
         let valueNode:TreeNode = this.AST.current.children[1];
+        let symbolData = this.AST.current.getSymbol(symbolNode.token.symbol);
 
-        if (valueNode.name == "ID"){
-            // grab from memory if child 1 is the variable
+        //load in value not actually needed
+        /*this.addOp(0xAD,this.nextCode++); 
+        this.addTempOp("T"+symbolData.tempPosition,this.nextCode++); //TMP position
+        this.addOp(0x00,this.nextCode++);*/
 
+        switch(valueNode.name){
+            case("ADD"):
+                this.AST.current = valueNode;
+                this.genAddition();
+                break;
+            case("IfEqual"):
+            case("IfNotEqual"):
+            case("DIGIT"):
+                this.addOp(0xA9,this.nextCode++); //load acc with constant
+                this.addOp(parseInt(valueNode.token.symbol),this.nextCode++); // constant being the symbol of the value token
+                break;
+            case("T_BOOL"):
+                this.addOp(0xA9,this.nextCode++); //load acc with constant
+                this.addOp(0x01,this.nextCode++); //constant being 1 (true)
+                break;
+            case("F_BOOL"):
+                this.addOp(0xA9,this.nextCode++); //load acc with constant
+                this.addOp(0x00,this.nextCode++); //constant being 0 (false)
+                break;
+            default: // default is a string
+                this.addOp(0xA9,this.nextCode++); //load acc with constant
+                this.addOp(this.stringMap.get(valueNode.name),this.nextCode++); //constant being 0 (false)
+                break;
         }
-        /* child 2 is either a variable/literal or addition/comparison
-        if comparison/addition, call the addition function and load it to accumulator
 
-        */
+        this.addOp(0x8D,this.nextCode++); // save from ACC back to memory
+        this.addTempOp("T"+symbolData.tempPosition,this.nextCode++);
+        this.addOp(0x00,this.nextCode++);
+
     }
 
     genPrintStatement(){
@@ -179,6 +206,9 @@ class CodeGenerator extends Entity{
             case("ID"):
                 this.printID();
                 break;
+            case("ADD"):
+                this.printAddition();
+                break;
             default:
                 this.printString();
                 break;
@@ -186,7 +216,6 @@ class CodeGenerator extends Entity{
         }
     }
 
-    // TO DO, FINISH PRINTING B type INTERGERS
     printID(){
         let child = this.AST.current.children[0];
         let token = child.token;
@@ -199,6 +228,7 @@ class CodeGenerator extends Entity{
                 this.addOp(0xAC,this.nextCode++); // load y register from memory
                 this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
                 this.addOp(0x00,this.nextCode++); // load y register from memory
+                this.addOp(0xFF,this.nextCode++); // make the system call
                 break;
             case("S_TYPE"):
                 this.addOp(0xA2,this.nextCode++); // Load X register with constant
@@ -206,6 +236,7 @@ class CodeGenerator extends Entity{
                 this.addOp(0xAC,this.nextCode++); // load y register from memory
                 this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
                 this.addOp(0x00,this.nextCode++); // load y register from memory
+                this.addOp(0xFF,this.nextCode++); // make the system call
                 break;
             case("B_TYPE"):
                 // first need a check if it is false or true
@@ -278,8 +309,24 @@ class CodeGenerator extends Entity{
 
     }
     printAddition(){
+        this.AST.current = this.AST.current.children[0]
+        this.genAddition();
+        // save the accumulator to temp position so we can put it in y register
+        this.addOp(0x8D,this.nextCode++); 
+        this.addOp(0xFF,this.nextCode++);
+        this.addOp(0x00,this.nextCode++); 
+
+        this.addOp(0xAC,this.nextCode++); // Load y register with temp value
+        this.addOp(0xFF,this.nextCode++);
+        this.addOp(0x00,this.nextCode++); 
+
+        this.addOp(0xA2,this.nextCode++); // Load X register with constant
+        this.addOp(0x01,this.nextCode++); // constant = 1
+
+        this.addOp(0xFF,this.nextCode++); // make the system call
 
     }
+
 
     genIfStatement(){
 
@@ -289,14 +336,60 @@ class CodeGenerator extends Entity{
 
     }
 
+    //takes the two symbols and adds it to accumulator. 
     genAddition(){
-        // current node(And) has 2 children, one is a digit, the other is a digit/id/add statement
-        /*
-            if 2nd is an add statement, call the add statement here, the final value should be in accumulator 
+        let firstNode:TreeNode = this.AST.current.children[0];
+        let secondNode:TreeNode = this.AST.current.children[1];
+        let currentScope = this.AST.current;
+        if (secondNode.name != 'ADD'){
+            // add the two values
 
-        */
-        // add both and plop it into the accumulator
+            // load second value in accumulator
+            if (secondNode.name == "ID"){
+                let symbolData = this.AST.current.getSymbol(secondNode.token.symbol);
+                this.addOp(0xAD,this.nextCode++); // Load ACC from memory
+                this.addTempOp('T'+symbolData.tempPosition,this.nextCode++);
+                this.addOp(0x00,this.nextCode++); 
+            }else { // is a digit
+                this.addOp(0xA9,this.nextCode++); // Load ACC with constant
+                this.addOp(parseInt(secondNode.token.symbol),this.nextCode++); 
+            }
+            // save second value thats in ACC to temp file
+            this.addOp(0x8D,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // 0xFF is the temp storage
+            this.addOp(0x00,this.nextCode++);
+
+            //first part must always be a digit
+            this.addOp(0xA9,this.nextCode++); // Load ACC with constant
+            this.addOp(parseInt(firstNode.token.symbol,16),this.nextCode++); 
+
+            // now add the first to the second
+            this.addOp(0x6D,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // 0xFF is the temp storage
+            this.addOp(0x00,this.nextCode++);
+        }
+        else{
+            this.AST.current = secondNode;
+            this.genAddition(); // inner result is now stored in ACC
+            // save second value thats in ACC to temp file
+            this.addOp(0x8D,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // 0xFF is the temp storage
+            this.addOp(0x00,this.nextCode++);
+
+            //first part must always be a digit
+            this.addOp(0xA9,this.nextCode++); // Load ACC with constant
+            this.addOp(parseInt(firstNode.token.symbol),this.nextCode++); 
+
+            // now add the first to the second
+            this.addOp(0x6D,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // 0xFF is the temp storage
+            this.addOp(0x00,this.nextCode++);
+
+            this.AST.current = currentScope;
+        }
+        
     }
+
 
     //load variable into accumulator
     genVariableGetter(){
