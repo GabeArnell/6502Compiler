@@ -596,7 +596,6 @@ class CodeGenerator extends Entity{
             
         }
         
-        // acc should be the final result here
     }
     // gens one side of a comparison statement, leaves result in temp mem slot (0xFF)
     genComparisonSide(child:TreeNode){
@@ -610,7 +609,16 @@ class CodeGenerator extends Entity{
                 break;
             case("IfNotEqual"):
             case("IfEqual"):
-                //genComparison(true)
+                let prevCurrent = this.AST.current;
+                this.AST.current = child
+                this.genComparision(true)
+                //load acc with the temp position
+                this.addOp(0xAD,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+
+                this.AST.current = prevCurrent;
+                break;
             case("DIGIT"):
                 this.addOp(0xA9,this.nextCode++); 
                 this.addOp(parseInt(child.token.symbol),this.nextCode++); 
