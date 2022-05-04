@@ -78,10 +78,10 @@ class Compiler extends Entity{
         this.machineCode = this.generator.genCode(this.ast);
         if (this.generator.errorFeedback){
             this.info("INCOMPLETE MACHINE CODE for program "+this.id)
-            this.info("")
             //this.warn("Code Generation skipped due to Semantic Analysis error.")
+        }else{
+            document.getElementById('machineCodeOutput').innerHTML = this.machineCode.join(" ")
         }
-        document.getElementById('machineCodeOutput').innerHTML = this.machineCode.join(" ")
     }
 
 

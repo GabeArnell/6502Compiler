@@ -84,12 +84,14 @@ class CodeGenerator extends Entity{
             this.info("Code Generation completed successfully with "+this.warnings+" warning(s)\n");
         }
         // fill in rest with 00s
+        let unusedSpaces:number = 0;
         for (let i = 0; i < this.machineCode.length; i++){
             if (this.machineCode[i] == null){
                 this.machineCode[i] = "00"
+                unusedSpaces++;
             }
         }
-        
+        this.info(`${0x100-unusedSpaces}/256 bytes used.`)
         return this.machineCode;
     }
 
@@ -219,6 +221,10 @@ class CodeGenerator extends Entity{
             case("ADD"):
                 this.printAddition();
                 break;
+            case("IfEqual"):
+            case("IfNotEqual"):
+                this.printComparison();
+                break;
             default:
                 this.printString();
                 break;
@@ -317,6 +323,46 @@ class CodeGenerator extends Entity{
     }
     printComparison(){
         //steal code from print ID (B_TYPE)
+        let current = this.AST.current;
+        let child = this.AST.current.children[0];
+        this.AST.current = child;
+        this.genComparision();
+        let savePosition = child.compPosition;
+        this.AST.current = current;
+        //load to comp position
+        this.addOp(0x8D,this.nextCode++); 
+        this.addOp(savePosition,this.nextCode++); 
+        this.addOp(0x00,this.nextCode++); 
+
+        this.addOp(0xA2,this.nextCode++); // Load X register with constant
+        this.addOp(0x01,this.nextCode++); // constant = 1
+        this.addOp(0xEC,this.nextCode++); // Compare X reg to memory 
+        this.addOp(savePosition,this.nextCode++);  //memory is the comp position
+        this.addOp(0x00,this.nextCode++); 
+        this.addOp(0xD0,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+        this.addOp(/*Need to check*/0x0A,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+        // true on equals, does not skip
+        {
+            this.addOp(0xA2,this.nextCode++); // Load X register with constant
+            this.addOp(0x02,this.nextCode++); // constant = 2
+            this.addOp(0xA0,this.nextCode++); // Load y register with constant
+            this.addOp(this.trueStringPosition,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // make the system call
+            //then we need to skip over the false portion
+            this.addOp(0xEC,this.nextCode++); // Compare X reg to first memory bit, which can not be 00
+            this.addOp(0x00,this.nextCode++); 
+            this.addOp(0x00,this.nextCode++);
+            this.addOp(0xD0,this.nextCode++); //jump a number of bytes ahead to skip false
+            this.addOp(/*NEEDS TO check*/0x05,this.nextCode++); //jump a number of bytes ahead if it isnt == 1 (aka bool is 0, or false)
+        }
+        // false on not equals
+        {
+            this.addOp(0xA2,this.nextCode++); // Load X register with constant
+            this.addOp(0x02,this.nextCode++); // constant = 2
+            this.addOp(0xA0,this.nextCode++); // Load y register with constant
+            this.addOp(this.falseStringPosition,this.nextCode++);
+            this.addOp(0xFF,this.nextCode++); // make the system call
+        }
 
     }
     printAddition(){
@@ -481,14 +527,8 @@ class CodeGenerator extends Entity{
 
 
 
-    /*  Ignore the below function:
-    New comparison method: Go through the code and reserve a memory spot for each comparison made.
-    The result of the comparison is saved in that spot. That way when the comparison 
-
-
-    */
     //starts at a comparison function and sets the temp value to 1 (true) or 0 (false)
-    genComparision(innerbranch = false){
+    genComparision(){
         // gen one side, either a int, string, bool,id, comparison, or addition
         let comparisonNode = this.AST.current;
         let child1 = this.AST.current.children[0];
@@ -619,7 +659,7 @@ class CodeGenerator extends Entity{
             case("IfNotEqual"):
             case("IfEqual"):
                 this.AST.current = child
-                this.genComparision(true)
+                this.genComparision()
                 //load acc with the temp position
                 this.addOp(0xAD,this.nextCode++); 
                 this.addOp(0xFF,this.nextCode++); 
