@@ -16,6 +16,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
     public children:TreeNode[] = [];
     public token:Token = null; // leaf nodes have a pointer to the token they use
     public kind: nodeType;
+    public compPosition:number = null; // Code Gen: if node is a comparison, where the result of the comparison is stored
 
     public symbolTable = null;
 
@@ -39,7 +40,7 @@ class TreeNode{//would have called it Node but thats already being used by some 
                     declaration: idToken,
                     initialization: null,
                     used: false,
-                    tempPosition: null,// for code generation
+                    tempPosition: null,// for code generation variable temp positions
                 }
                 console.log(this.symbolTable);
             }else{

@@ -64,6 +64,7 @@ class CodeGenerator extends Entity{
         this.falseStringPosition = 0xF4
 
         this.collectStrings();
+        this.collectComparisons();
 
         this.genNext();
         
@@ -371,6 +372,17 @@ class CodeGenerator extends Entity{
                 this.AST.current = child;
                 this.genComparision();
                 this.AST.current = this.AST.current.parent
+                // if temp position has a 1 that means we can do it
+                //load 1 into x-register
+                this.addOp(0xA2,this.nextCode++); 
+                this.addOp(0x01,this.nextCode++); 
+
+                //compare 1 to x-register
+                this.addOp(0xEC,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+                break;
+                
         }
         // create branch
         this.addOp(0xD0,this.nextCode++); 
@@ -466,39 +478,157 @@ class CodeGenerator extends Entity{
         
     }
 
+
+
+    /*  Ignore the below function:
+    New comparison method: Go through the code and reserve a memory spot for each comparison made.
+    The result of the comparison is saved in that spot. That way when the comparison 
+
+
+    */
     //starts at a comparison function and sets the temp value to 1 (true) or 0 (false)
-    genComparision(){
+    genComparision(innerbranch = false){
         // gen one side, either a int, string, bool,id, comparison, or addition
+        let comparisonNode = this.AST.current;
         let child1 = this.AST.current.children[0];
         let child2 = this.AST.current.children[1];
         // gen the left side
         this.genComparisonSide(child1);
 
-
-        //send to ACC
-        this.addOp(0xAD,this.nextCode++); 
-        this.addOp(0xFF,this.nextCode++); 
+        // save result to the comparison's memory register
+        this.addOp(0x8D,this.nextCode++); 
+        this.addOp(comparisonNode.compPosition,this.nextCode++); 
         this.addOp(0x00,this.nextCode++); 
-
-        // save result to x register
-        this.addOp(0xD0,this.nextCode++); 
 
         // gen the right side, stays in accumulator
         this.genComparisonSide(child2);
+        //load x from comparisonNode position
+        this.addOp(0xAE,this.nextCode++); 
+        this.addOp(comparisonNode.compPosition,this.nextCode++); 
+        this.addOp(0x00,this.nextCode++); 
 
-        //compare x register to temp
+        // put right result (thats still in ACC) into the comparisonNode position
+        this.addOp(0x8D,this.nextCode++); 
+        this.addOp(comparisonNode.compPosition,this.nextCode++); 
+        this.addOp(0x00,this.nextCode++); 
+
+        // compare x register to comparisonNode's comp memory that was saved
         this.addOp(0xEC,this.nextCode++); 
+        this.addOp(comparisonNode.compPosition,this.nextCode++); 
+        this.addOp(0x00,this.nextCode++); 
 
+        // set the temp to 1 or 0 based on z flag, needs different structure depending on if it is != or ==
+        if (comparisonNode.name == "IfEqual"){
+            // will always branch to the not equal
+            this.addOp(0xD0,this.nextCode++); 
+            this.addOp(0x0C,this.nextCode++); //jump here, skipping 13 instructions
+            // make temp true and skip past other one
+            {
+                //set acc to true
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(0x01,this.nextCode++);
+
+                //save to temp, could honestly do this to comparison node tbh
+                this.addOp(0x8D,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+                // force a branch to skip over the next lines
+                // load X with 0, which we know isnt == to temp position
+                this.addOp(0xA2,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++);
+
+                this.addOp(0xEC,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+                //jump over false
+                this.addOp(0xD0,this.nextCode++); 
+                this.addOp(0x05,this.nextCode++); //jump here    
+            }
+            // make temp false
+            {
+                //set acc to false
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++);
+
+                //save to temp, could honestly do this to comparison node tbh
+                this.addOp(0x8D,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++);                 
+            }
+        }
+        else { // comparisonNode.name == "IfNotEqual"
+                // will always branch to the not equal
+                this.addOp(0xD0,this.nextCode++); 
+                this.addOp(0x0C,this.nextCode++); //jump here, skipping 13 instructions
+                // make temp true and skip past other one
+                {
+                    //set acc to false
+                    this.addOp(0xA9,this.nextCode++); 
+                    this.addOp(0x00,this.nextCode++);
+    
+                    //save to temp, could honestly do this to comparison node tbh
+                    this.addOp(0x8D,this.nextCode++); 
+                    this.addOp(0xFF,this.nextCode++); 
+                    this.addOp(0x00,this.nextCode++); 
+                    // force a branch to skip over the next lines
+                    // load X with 1, which we know isnt == to temp position
+                    this.addOp(0xA2,this.nextCode++); 
+                    this.addOp(0x01,this.nextCode++);
+    
+                    this.addOp(0xEC,this.nextCode++); 
+                    this.addOp(0xFF,this.nextCode++); 
+                    this.addOp(0x00,this.nextCode++); 
+                    //jump over false
+                    this.addOp(0xD0,this.nextCode++); 
+                    this.addOp(0x05,this.nextCode++); //jump here    
+                }
+                // make temp false
+                {
+                    //set acc to true
+                    this.addOp(0xA9,this.nextCode++); 
+                    this.addOp(0x01,this.nextCode++);
+    
+                    //save to temp, could honestly do this to comparison node tbh
+                    this.addOp(0x8D,this.nextCode++); 
+                    this.addOp(0xFF,this.nextCode++); 
+                    this.addOp(0x00,this.nextCode++);                 
+                }
+            
+        }
+        
+        // acc should be the final result here
     }
     // gens one side of a comparison statement, leaves result in temp mem slot (0xFF)
     genComparisonSide(child:TreeNode){
+        //load into ACC
         switch(child.name){
-            case("DIGIT"):
+            case("ID"):
 
                 break;
+            case("ADD"):
 
+                break;
+            case("IfNotEqual"):
+            case("IfEqual"):
+                //genComparison(true)
+            case("DIGIT"):
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(parseInt(child.token.symbol),this.nextCode++); 
+                break;
+            case("T_BOOL"):
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(0x01,this.nextCode++); 
+                break;
+            case("F_BOOL"):
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+                break;
             default: // string
-        }
+                // just load the value into the temp register
+                this.addOp(0xA9,this.nextCode++); 
+                this.addOp(this.stringMap.get(child),this.nextCode++); 
+                break;
+        }        
     }
 
 
@@ -584,6 +714,23 @@ class CodeGenerator extends Entity{
                 let startingPosition = 0xFF-gen.heapOffset+1;
                 gen.log("Stored string [ "+string+" ] at position "+startingPosition.toString(16).toUpperCase())
                 gen.stringMap.set(string,startingPosition)
+            }
+            for (let child of node.children){
+                iterate(child);
+            }
+        }
+        iterate(this.AST.root);
+    }
+
+    collectComparisons(){
+        let gen = this;
+        function iterate(node:TreeNode):void{
+            //terminal string that has not been set yet
+            if (node.name == "IfEqual" || node.name == "IfNotEqual"){ 
+                gen.addOp(0x00,0xFF-gen.heapOffset)
+                node.compPosition = 0xFF-gen.heapOffset;
+                gen.heapOffset++;
+                gen.log("Stored comparisson [ "+node.name+" ] at position "+node.compPosition.toString(16).toUpperCase())
             }
             for (let child of node.children){
                 iterate(child);
