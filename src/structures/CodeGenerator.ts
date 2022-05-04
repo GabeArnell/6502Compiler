@@ -316,6 +316,7 @@ class CodeGenerator extends Entity{
         this.addOp(0xFF,this.nextCode++); // make the system call
     }
     printComparison(){
+        //steal code from print ID (B_TYPE)
 
     }
     printAddition(){
@@ -600,16 +601,23 @@ class CodeGenerator extends Entity{
     // gens one side of a comparison statement, leaves result in temp mem slot (0xFF)
     genComparisonSide(child:TreeNode){
         //load into ACC
+        let prevCurrent = this.AST.current
         switch(child.name){
             case("ID"):
-
+                let symbol = child.token.symbol;
+                let symbolData = this.AST.current.getSymbol(symbol);
+                //load acc with whatever the value is in memory
+                this.addOp(0xAD,this.nextCode++); 
+                this.addTempOp("T"+symbolData.tempPosition,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
                 break;
             case("ADD"):
-
+                this.AST.current = child
+                this.genAddition();
+                this.AST.current = prevCurrent;
                 break;
             case("IfNotEqual"):
             case("IfEqual"):
-                let prevCurrent = this.AST.current;
                 this.AST.current = child
                 this.genComparision(true)
                 //load acc with the temp position
