@@ -34,6 +34,9 @@ class CodeGenerator extends Entity{
     }
     
     genCode(AST:Tree):string[]{
+
+        // MAKE DOCUMENT FOR ALL TESTS ON GITHUB AS PER PROJ4 INSTRUCTIONS
+
         this.info("Code Generation for program "+this.compiler.id);
 
         // Run through the tree and ensure 
@@ -113,6 +116,12 @@ class CodeGenerator extends Entity{
             case("PrintStatement"):
                 this.genPrintStatement();
                 break;
+            case("IfStatement"):
+                this.genIfStatement();
+                break;
+            case("WhileStatement"):
+                this.genWhileStatement();
+            
     }
     }
     genBlock(){
@@ -328,12 +337,79 @@ class CodeGenerator extends Entity{
     }
 
 
-    genIfStatement(){
+    genIfStatement(includeLoopback = false){
+        let child:TreeNode = this.AST.current.children[0];
+        let blockChild:TreeNode = this.AST.current.children[1];
 
+        let jumpStart:number = null
+        let compareStep = this.nextCode;
+        switch(child.name){
+            case("T_BOOL"):
+            case("F_BOOL"): // check if these values are equal to 1, if not, skip
+                //load 1 or 0 into acc
+                this.addOp(0xA9,this.nextCode++); 
+                if (child.name == "T_BOOL"){
+                    this.addOp(0x01,this.nextCode++); 
+                }else{
+                    this.addOp(0x00,this.nextCode++); 
+                }
+                //store to temp storage
+                this.addOp(0x8D,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+
+                //load 1 into x-register
+                this.addOp(0xA2,this.nextCode++); 
+                this.addOp(0x01,this.nextCode++); 
+
+                //compare 1 to x-register
+                this.addOp(0xEC,this.nextCode++); 
+                this.addOp(0xFF,this.nextCode++); 
+                this.addOp(0x00,this.nextCode++); 
+                break;
+            default: // comparison case
+                this.AST.current = child;
+                this.genComparision();
+                this.AST.current = this.AST.current.parent
+        }
+        // create branch
+        this.addOp(0xD0,this.nextCode++); 
+        jumpStart = this.nextCode;
+        this.addTempOp("JP",this.nextCode++); // this is the one that gets changed
+        this.AST.current = blockChild;
+        this.genNext();
+        // gen a loopback back to start
+        if (includeLoopback){
+            //load 1 into acc
+            this.addOp(0xA9,this.nextCode++); 
+            this.addOp(0x01,this.nextCode++); 
+
+            // save to temp
+            this.addOp(0x8D,this.nextCode++); 
+            this.addOp(0xFF,this.nextCode++); 
+            this.addOp(0x00,this.nextCode++); 
+            
+            //load 0 into xreg
+            this.addOp(0xA2,this.nextCode++); 
+            this.addOp(0x00,this.nextCode++); 
+
+            // compare, always forcing the z flag to be 0
+            this.addOp(0xEC,this.nextCode++); 
+            this.addOp(0xFF,this.nextCode++); 
+            this.addOp(0x00,this.nextCode++); 
+
+            // Jump backwards, respecting 2's complement
+            this.addOp(0xD0,this.nextCode++); 
+            let backDistance = this.nextCode-(compareStep)
+            this.addOp(0xFF-backDistance,this.nextCode++);
+        }
+        let tail = this.nextCode;// this is where we want to jump to
+        let jumpDistance = tail-(jumpStart+1) 
+        this.addOp(jumpDistance,jumpStart,true);
     }
 
     genWhileStatement(){
-
+        this.genIfStatement(true)
     }
 
     //takes the two symbols and adds it to accumulator. 
@@ -390,14 +466,44 @@ class CodeGenerator extends Entity{
         
     }
 
+    //starts at a comparison function and sets the temp value to 1 (true) or 0 (false)
+    genComparision(){
+        // gen one side, either a int, string, bool,id, comparison, or addition
+        let child1 = this.AST.current.children[0];
+        let child2 = this.AST.current.children[1];
+        // gen the left side
+        this.genComparisonSide(child1);
 
-    //load variable into accumulator
-    genVariableGetter(){
-        
+
+        //send to ACC
+        this.addOp(0xAD,this.nextCode++); 
+        this.addOp(0xFF,this.nextCode++); 
+        this.addOp(0x00,this.nextCode++); 
+
+        // save result to x register
+        this.addOp(0xD0,this.nextCode++); 
+
+        // gen the right side, stays in accumulator
+        this.genComparisonSide(child2);
+
+        //compare x register to temp
+        this.addOp(0xEC,this.nextCode++); 
+
+    }
+    // gens one side of a comparison statement, leaves result in temp mem slot (0xFF)
+    genComparisonSide(child:TreeNode){
+        switch(child.name){
+            case("DIGIT"):
+
+                break;
+
+            default: // string
+        }
     }
 
 
     addOp(opcode:number,position:number,overide:boolean=false){
+        if (this.errorFeedback){return;}
         if (position < 0 || position > 256){
             this.errorFeedback = "Invalid Position: "+position+ " is not a valid memory position"
             return;
@@ -413,6 +519,7 @@ class CodeGenerator extends Entity{
         this.machineCode[position] = stringCode
     }
     addTempOp(opstring:string,position:number){
+        if (this.errorFeedback){return;}
         if (position < 0 || position > 256){
             this.errorFeedback = "Invalid Position: "+position+ " is not a valid memory position --temp op"
             return;
@@ -459,9 +566,10 @@ class CodeGenerator extends Entity{
     collectStrings(){
         let gen = this;
 
-        gen.stringMap.set('true',0xFA)
-        gen.log("Stored string [ true ] at position "+0xFA.toString(16).toUpperCase())
-
+        gen.stringMap.set('true',this.trueStringPosition)
+        gen.log("Stored string [ true ] at position "+this.trueStringPosition.toString(16).toUpperCase())
+        gen.stringMap.set('false',this.falseStringPosition)
+        gen.log("Stored string [ false ] at position "+this.falseStringPosition.toString(16).toUpperCase())
         function iterate(node:TreeNode):void{
             console.log(node)
             //terminal string that has not been set yet

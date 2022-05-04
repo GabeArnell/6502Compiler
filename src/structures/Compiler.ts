@@ -41,7 +41,7 @@ class Compiler extends Entity{
         if (!this.tokenStream){
             this.warn("Parsing skipped due to Lex errors.")
             this.warn("Semantic Analysis skipped due to Lex errors.")
-            //this.warn("Code Generation skipped due to Lex error.")
+            this.warn("Code Generation skipped due to Lex error.")
             return
         };
         
@@ -49,7 +49,7 @@ class Compiler extends Entity{
         this.cst = this.parse.parseStream(this.tokenStream);
         if (!this.cst){
             this.warn("Semantic Analysis skipped due to Parse error.")
-            //this.warn("Code Generation skipped due to Parse error.")
+            this.warn("Code Generation skipped due to Parse error.")
 
             return
         }
@@ -64,7 +64,7 @@ class Compiler extends Entity{
             this.info("INCOMPLETE AST for program "+this.id)
             this.printTree(this.ast)
             this.info("")
-            //this.warn("Code Generation skipped due to Semantic Analysis error.")
+            this.warn("Code Generation skipped due to Semantic Analysis error.")
             return;
         }else{
             this.info("AST for program "+this.id)
@@ -81,7 +81,7 @@ class Compiler extends Entity{
             this.info("")
             //this.warn("Code Generation skipped due to Semantic Analysis error.")
         }
-        document.getElementById('machineCodeOutput').innerText = this.machineCode.join(" ")
+        document.getElementById('machineCodeOutput').innerHTML = this.machineCode.join(" ")
     }
 
 
