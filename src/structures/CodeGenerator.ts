@@ -172,7 +172,7 @@ class CodeGenerator extends Entity{
         /*this.addOp(0xAD,this.nextCode++); 
         this.addTempOp("T"+symbolData.tempPosition,this.nextCode++); //TMP position
         this.addOp(0x00,this.nextCode++);*/
-
+        let currentNode = this.AST.current;
         switch(valueNode.name){
             case("ADD"):
                 this.AST.current = valueNode;
@@ -180,6 +180,10 @@ class CodeGenerator extends Entity{
                 break;
             case("IfEqual"):
             case("IfNotEqual"):
+                this.AST.current=valueNode;
+                this.genComparision();
+                this.AST.current = currentNode;
+                break;
             case("DIGIT"):
                 this.addOp(0xA9,this.nextCode++); //load acc with constant
                 this.addOp(parseInt(valueNode.token.symbol),this.nextCode++); // constant being the symbol of the value token
@@ -194,7 +198,7 @@ class CodeGenerator extends Entity{
                 break;
             default: // default is a string
                 this.addOp(0xA9,this.nextCode++); //load acc with constant
-                this.addOp(this.stringMap.get(valueNode.name),this.nextCode++); //constant being 0 (false)
+                this.addOp(this.stringMap.get(valueNode.token['string']),this.nextCode++); //constant being 0 (false)
                 break;
         }
 
@@ -682,7 +686,7 @@ class CodeGenerator extends Entity{
             default: // string
                 // just load the value into the temp register
                 this.addOp(0xA9,this.nextCode++); 
-                this.addOp(this.stringMap.get(child),this.nextCode++); 
+                this.addOp(this.stringMap.get(child.token['string']),this.nextCode++); 
                 break;
         }        
     }
@@ -759,17 +763,29 @@ class CodeGenerator extends Entity{
         function iterate(node:TreeNode):void{
             console.log(node)
             //terminal string that has not been set yet
-            if (node.token && node.token['string'] && gen.stringMap.get(node.name) == null){ 
+            if (node.token && node.token['string']!=null && gen.stringMap.get(node.name) == null){ 
                 let string = node.name;
-                gen.addOp(0x00,0xFF-gen.heapOffset)
-                gen.heapOffset++;
-                for (let i = string.length-1; i >= 0; i--){
-                    gen.addOp(charToHex(string.charAt(i)),0xFF-gen.heapOffset)
+                if (string == ""){
+                    let startingPosition = 0xFF-gen.heapOffset
+                    gen.addOp(0x00,startingPosition)
                     gen.heapOffset++;
+                    gen.log("Stored string [ ] at position "+startingPosition.toString(16).toUpperCase())
+                    gen.stringMap.set("",startingPosition)
+                }else{
+                    gen.addOp(0x00,0xFF-gen.heapOffset)
+                    gen.heapOffset++;
+                    for (let i = string.length-1; i >= 0; i--){
+                        gen.addOp(charToHex(string.charAt(i)),0xFF-gen.heapOffset)
+                        gen.heapOffset++;
+                    }
+                    let startingPosition = 0xFF-gen.heapOffset+1;
+                    gen.log("Stored string [ "+string+" ] at position "+startingPosition.toString(16).toUpperCase())
+                    gen.stringMap.set(string,startingPosition)
                 }
-                let startingPosition = 0xFF-gen.heapOffset+1;
-                gen.log("Stored string [ "+string+" ] at position "+startingPosition.toString(16).toUpperCase())
-                gen.stringMap.set(string,startingPosition)
+                
+            }else {
+                console.log("[",node.name,"] was missed")
+                console.log(node)
             }
             for (let child of node.children){
                 iterate(child);

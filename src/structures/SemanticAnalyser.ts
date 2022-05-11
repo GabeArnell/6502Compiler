@@ -326,7 +326,7 @@ class SemanticAnalyser extends Entity{
                     return tokenList;
                 case("L_PAREN"):
                     this.match("L_PAREN");
-
+                    
                     /* There are two options here, either it is == or !=, ifEq or ifNEq. 
                     However we can't tell that until we parse the expression, and we need the ifEq/ifNEq node to be on top of the expression.
                     So we'll assume that the BoolOp is == until we get to the parseBoolOp, then if it is different we'll change the node to ifNEq
