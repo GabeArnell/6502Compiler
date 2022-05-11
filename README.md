@@ -3,6 +3,9 @@ Browser App for Compilers class
 
 This is a browser app writen in TypeScript, compiled into JS for usage. The sourcecode typescript is in the src folder and compiles into the /dist/js folder.
 
+The test cases document is in
+CodeGenTestCases.txt
+But the test cases (and the actual code for the test cases) is accessible via the test cases dropdown menu, or the TestCases.ts in the src folder.
 
 COMPILING THE APP
 
