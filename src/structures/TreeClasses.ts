@@ -20,13 +20,29 @@ class TreeNode{//would have called it Node but thats already being used by some 
 
     public symbolTable = null;
 
-    public getSymbol(symbol:string){
-        if (!this.symbolTable || !this.symbolTable[symbol]){
+    public getSymbol(symbol:string,currentToken:Token = null){
+        if (this.symbolTable && this.symbolTable[symbol]){
+            console.log('block has token')
+            let declarationSpot = this.symbolTable[symbol].declaration;
+            // this check ensures that the symbol is being grabbed after it is being declared, otherwise if it was used in same scope but before declaration
+            // it would return error instead of properly checking for above nodes
+            if (currentToken && (currentToken.row > declarationSpot.row || (currentToken.row == declarationSpot.row && currentToken.column >= declarationSpot.column)) ){
+                console.log('found old')
+                return this.symbolTable[symbol]
+            }else if (currentToken){
+                console.log(symbol,'is being used before it is declared in this scope, checking parent for the same symbol')
+                if (this.parent == null) return null;
+                return this.parent.getSymbol(symbol,currentToken);
+            }else{
+                console.log('found with no current')
+                return this.symbolTable[symbol]
+            }
+            
+        }else{
             if (this.parent == null) return null;
             console.log('cant find ',symbol,'checking parent')
-            return this.parent.getSymbol(symbol);
+            return this.parent.getSymbol(symbol,currentToken);
         }
-        return this.symbolTable[symbol]
     }
 
     public addSymbol(idToken:Token,typeToken:Token):string{
