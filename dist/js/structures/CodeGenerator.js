@@ -113,7 +113,7 @@ class CodeGenerator extends Entity {
     genVarDecl() {
         let typeNode = this.AST.current.children[0];
         let symbolNode = this.AST.current.children[1];
-        let symbolData = this.AST.current.getSymbol(symbolNode.token.symbol);
+        let symbolData = this.AST.current.getSymbol(symbolNode.token.symbol, symbolNode.token);
         symbolData.tempPosition = this.nextTemp++;
         this.stackOffset++; // static table now has 1 more symbol
         this.addOp(0xA9, this.nextCode++); //load accumulator with constant
@@ -135,7 +135,7 @@ class CodeGenerator extends Entity {
     genAssignmentStatement() {
         let symbolNode = this.AST.current.children[0];
         let valueNode = this.AST.current.children[1];
-        let symbolData = this.AST.current.getSymbol(symbolNode.token.symbol);
+        let symbolData = this.AST.current.getSymbol(symbolNode.token.symbol, symbolNode.token);
         //load in value not actually needed
         /*this.addOp(0xAD,this.nextCode++);
         this.addTempOp("T"+symbolData.tempPosition,this.nextCode++); //TMP position
@@ -151,6 +151,13 @@ class CodeGenerator extends Entity {
                 this.AST.current = valueNode;
                 this.genComparision();
                 this.AST.current = currentNode;
+                break;
+            case ("ID"):
+                let valueSymbol = valueNode.token.symbol;
+                let valueSymbolData = this.AST.current.getSymbol(valueSymbol, valueNode.token);
+                this.addOp(0xAD, this.nextCode++); // load acc with memory value
+                this.addTempOp("T" + valueSymbolData.tempPosition, this.nextCode++); // memory value of the right side symbol 
+                this.addOp(0x00, this.nextCode++);
                 break;
             case ("DIGIT"):
                 this.addOp(0xA9, this.nextCode++); //load acc with constant
@@ -203,7 +210,7 @@ class CodeGenerator extends Entity {
         let child = this.AST.current.children[0];
         let token = child.token;
         let symbol = token.symbol; // the number
-        let symbolData = this.AST.current.getSymbol(symbol);
+        let symbolData = this.AST.current.getSymbol(symbol, token);
         switch (symbolData.type) {
             case ("I_TYPE"):
                 this.addOp(0xA2, this.nextCode++); // Load X register with constant
@@ -429,7 +436,7 @@ class CodeGenerator extends Entity {
             // add the two values
             // load second value in accumulator
             if (secondNode.name == "ID") {
-                let symbolData = this.AST.current.getSymbol(secondNode.token.symbol);
+                let symbolData = this.AST.current.getSymbol(secondNode.token.symbol, secondNode.token);
                 this.addOp(0xAD, this.nextCode++); // Load ACC from memory
                 this.addTempOp('T' + symbolData.tempPosition, this.nextCode++);
                 this.addOp(0x00, this.nextCode++);
@@ -572,7 +579,7 @@ class CodeGenerator extends Entity {
         switch (child.name) {
             case ("ID"):
                 let symbol = child.token.symbol;
-                let symbolData = this.AST.current.getSymbol(symbol);
+                let symbolData = this.AST.current.getSymbol(symbol, child.token);
                 //load acc with whatever the value is in memory
                 this.addOp(0xAD, this.nextCode++);
                 this.addTempOp("T" + symbolData.tempPosition, this.nextCode++);
