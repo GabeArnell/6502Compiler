@@ -451,6 +451,74 @@ a=2
 a=2
 a=2
 }$
+`,
+    ['Post-Class Tnull variable']: `
+{
+    int a
+    a = 0
+    string q
+    {
+       a = 2
+       int a
+       {
+          string c
+          {
+             a = 4
+             c = "hello"
+          }
+          print(c)
+       }
+       print(a)
+       q = "world"
+    }
+    print(a)
+    print(q)
+ }$
+
+`,
+    ['Post-Class Crash 1']: `
+ {
+       int a
+       a = 3
+       int b
+       b = 4
+       a = b
+       print(a)
+       if (a == b) {
+          print(a)
+       }
+     }$
+`,
+    ['Post-Class Crash 2']: `
+ {
+        int a
+        boolean b
+        string c
+       a = 9
+        b = true
+        {
+           print(a)
+           print(b)
+           b = false
+           c = "hello world"
+           int b
+           b = 0
+           {
+              print(c)
+              a = 1 + 2 + a
+              {
+                 print(b)
+              }
+           }
+           b = a
+           print(b)
+        }
+        print(b)
+    
+
+
+
+}$
 `
 };
 //# sourceMappingURL=TestCases.js.map
